@@ -1,0 +1,149 @@
+syntax = "proto3";
+
+package gamepb.dogpb;
+
+import "corepb.proto";
+
+message DogInfo {
+    int64 id = 1;
+    int64 expire_time = 3;
+    int32 status = 4;
+    int32 level = 5;
+    int32 active = 7;
+}
+
+message GetDogInfoRequest {
+    int64 host_gid = 1;
+}
+
+message GetDogInfoReply {
+    repeated DogInfo dogs = 1;
+    int64 coin = 3;
+    int64 protect_time = 4;
+    repeated DogFood foods = 5;
+}
+
+// 上阵狗狗（单狗部署，部署新狗会自动替换当前部署的狗）
+// 抓包确认：请求仅 dog_id；响应回显 dog_id，若替换了旧狗则附带 prev_dog_id。
+message DeployDogRequest {
+    int64 dog_id = 1;
+}
+
+message DeployDogReply {
+    int64 dog_id = 1;       // 本次部署的狗狗 ID
+    int64 prev_dog_id = 2;  // 被替换掉的旧部署狗狗 ID（无旧狗时不返回）
+}
+
+// 召回狗狗（撤回当前部署的狗；dog_id 可选，服务器总是撤回当前部署的狗）
+message WithdrawDogRequest {
+    int64 dog_id = 1;
+}
+
+message WithdrawDogReply {
+    int64 dog_id = 1;       // 撤回的狗狗 ID
+}
+
+message DogFood {
+    int64 id = 1;
+    int64 duration = 2;
+    int32 count = 3;
+}
+
+// ============ 狗类型信息 ============
+message DogTypeInfo {
+    int32 dog_type_id = 1;       // 狗类型ID (90001-)
+    string name = 2;             // 狗名称
+    int32 grow_up_time = 3;      // 成长时间(秒)
+    int32 field_4 = 4;           // 通常=1
+    int32 quality_level = 5;     // 品质等级(100=普通)
+    int32 field_7 = 7;           // 某些狗有=1
+}
+
+// ============ 狗粮信息 ============
+message DogFoodInfo {
+    int32 food_id = 1;           // 物品ID (90004/90005/90006)
+    int32 duration_sec = 2;      // 持续时间(86400/259200/432000)
+    int32 count = 3;             // 已喂数量
+}
+
+// ============ GetPetList (获取宠物列表) ============
+message GetPetListRequest {}
+message GetPetListReply {
+    repeated DogTypeInfo dog_types = 1;
+    int64 dog_type_id = 2;
+    int64 food_remain_sec = 3;
+    int64 food_total_cap = 4;
+    repeated DogFoodInfo food_items = 5;
+}
+
+// GetDogInfo(空 body) 响应的玩家宠物状态（与参考实现对齐）
+message PetStatus {
+    repeated DogTypeInfo dog_types = 1;
+    int64 dog_type_id = 2;
+    int64 food_remain_sec = 3;
+    int64 food_total_cap = 4;
+    repeated DogFoodInfo food_items = 5;
+}
+
+// ============ ActivateDog (激活) ============
+message ActivateDogRequest {
+    int64 dog_type_id = 1;
+}
+message ActivateDogReply {}
+
+// ============ AddFood (喂食) ============
+// 抓包/实测确认：喂食方法名为 AddFood（FeedDog 在当前服务器版本不存在）。
+message AddFoodRequest {
+    int32 food_id = 1;
+    int32 count = 2;
+}
+message AddFoodReply {
+    int64 food_sec = 1;  // 本次添加的食物时长(秒)
+}
+
+// ============ GetDogFoodList ============
+message GetDogFoodListRequest {}
+message DogFoodListInfo {
+    int64 food_type_id = 1;
+    string name = 2;
+    int64 duration_sec = 3;
+    int64 count = 4;
+}
+message GetDogFoodListReply {
+    repeated DogFoodListInfo foods = 1;
+}
+
+// ============ Guard Logs (守护日志) ============
+message GuardLogEntry {
+    int64 friend_gid = 1;
+    string friend_name = 2;
+    string friend_avatar = 3;
+    string dog_name = 4;
+    int64 bite_count = 5;
+    int64 gold_intercepted = 6;
+    int64 timestamp = 7;
+    bool success = 8;
+}
+
+message GetGuardLogsRequest {
+    int64 page = 1;
+    int64 page_size = 2;
+}
+message GetGuardLogsReply {
+    repeated GuardLogEntry items = 1;
+    int64 total = 2;
+}
+
+// ============ Guard Reward (护主奖励) ============
+message GetGuardRewardRequest {}
+message GetGuardRewardReply {
+    bool has_huzhu_dog = 1;
+    bool can_claim = 2;
+    repeated corepb.Item rewards = 3;
+}
+
+message ClaimGuardRewardRequest {}
+message ClaimGuardRewardReply {
+    repeated corepb.Item items = 1;
+    repeated corepb.Item bonus_items = 4;
+}

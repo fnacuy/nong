@@ -1,0 +1,401 @@
+<script setup lang="ts">
+import { nextTick, onMounted, ref, watch } from 'vue'
+import api from '@/api'
+import ConfirmModal from '@/components/ConfirmModal.vue'
+import AccountSettingsTab from '@/components/settings/AccountSettingsTab.vue'
+import ActivateCardTab from '@/components/settings/ActivateCardTab.vue'
+import DefaultPlanSettingsTab from '@/components/settings/DefaultPlanSettingsTab.vue'
+import UserSettingsTab from '@/components/settings/UserSettingsTab.vue'
+import { useAccountSettings } from '@/composables/settings/useAccountSettings'
+import { useAutomationSettings } from '@/composables/settings/useAutomationSettings'
+import { useStrategySettings } from '@/composables/settings/useStrategySettings'
+import { useUserSettings } from '@/composables/settings/useUserSettings'
+import { useSettingStore } from '@/stores/setting'
+import { useUserStore } from '@/stores/user'
+import AdminPanel from '@/views/AdminPanel.vue'
+
+const settingStore = useSettingStore()
+const userStore = useUserStore()
+
+type SettingsTabKey = 'account' | 'default-plan' | 'user' | 'activate-card'
+
+function getInitialSettingsTab(): SettingsTabKey {
+  const saved = localStorage.getItem('settings-active-tab')
+  const valid = saved === 'default-plan' || saved === 'user' || saved === 'activate-card'
+  if (!valid)
+    return 'account'
+  return saved
+}
+
+const activeTab = ref<SettingsTabKey>(getInitialSettingsTab())
+const settingsTabsNav = ref<HTMLElement | null>(null)
+
+async function scrollActiveTabIntoView() {
+  await nextTick()
+  const nav = settingsTabsNav.value
+  const button = nav?.querySelector<HTMLElement>(`[data-settings-tab="${activeTab.value}"]`)
+  if (!nav || !button)
+    return
+  const navRect = nav.getBoundingClientRect()
+  const btnRect = button.getBoundingClientRect()
+  if (btnRect.left < navRect.left) {
+    nav.scrollLeft += btnRect.left - navRect.left
+  }
+  else if (btnRect.right > navRect.right) {
+    nav.scrollLeft += btnRect.right - navRect.right
+  }
+}
+
+watch(activeTab, (newTab) => {
+  localStorage.setItem('settings-active-tab', newTab)
+  void scrollActiveTabIntoView()
+})
+
+const tabs = [
+  { key: 'account', label: '账号管理', icon: 'i-carbon-user-settings' },
+  { key: 'default-plan', label: '默认方案', icon: 'i-carbon-settings-adjust' },
+  { key: 'user', label: '用户管理', icon: 'i-carbon-user' },
+  { key: 'activate-card', label: '激活卡密', icon: 'i-carbon-key' },
+] as const
+
+const modalVisible = ref(false)
+const defaultPlanApplyingId = ref('')
+const modalConfig = ref({
+  title: '',
+  message: '',
+  type: 'primary' as 'primary' | 'danger',
+  isAlert: true,
+})
+
+function showAlert(message: string, type: 'primary' | 'danger' = 'primary') {
+  modalConfig.value = {
+    title: type === 'danger' ? '错误' : '提示',
+    message,
+    type,
+    isAlert: true,
+  }
+  modalVisible.value = true
+}
+
+function openCodeCleanupModal() {
+  showCodeCleanupModal.value = true
+  void loadCodeCleanupConfig()
+}
+
+const {
+  passwordSaving,
+  offlineSaving,
+  offlineTesting,
+  deviceProtocolLoading,
+  deviceProtocolSaving,
+  passwordForm,
+  deviceProtocolPresetOptions,
+  selectedDevicePreset,
+  deviceProtocolForm,
+  localOffline,
+  channelOptions,
+  currentChannelDocUrl,
+  openChannelDocs,
+  fillRandomDeviceMac,
+  fillRandomDeviceId,
+  fillRandomImei,
+  applyDevicePreset,
+  fetchDeviceProtocol,
+  syncLocalOfflineSettings,
+  handleSaveDeviceProtocol,
+  handleChangePassword,
+  handleSaveOffline,
+  handleTestOffline,
+  showActivateCardConfirm,
+  activateCardLoading,
+  activateUsername,
+  activateCardCode,
+  requestActivateCard,
+  confirmActivateCard,
+} = useUserSettings(showAlert)
+
+const {
+  accounts,
+  accountsLoading,
+  currentAccountId,
+  currentAccountName,
+  userIsAdmin,
+  userIsSuperAdmin,
+  showModal,
+  showDeleteConfirm,
+  deleteLoading,
+  editingAccount,
+  accountToDelete,
+  showClearStoppedConfirm,
+  clearStoppedLoading,
+  refreshWxCodesLoading,
+  showCodeCleanupModal,
+  codeCleanupLoading,
+  codeCleanupRunning,
+  codeCleanupConfig,
+  stoppedAccountsCount,
+  isAddAccountDisabled,
+  addAccountDisabledReason,
+  isAccountOpsDisabled,
+  fetchAccounts,
+  selectFirstAccountIfNeeded,
+  openSettings,
+  openAddModal,
+  openEditModal,
+  handleDelete,
+  confirmDelete,
+  toggleAccount,
+  refreshWxCodesNow,
+  handleSaved,
+  selectAccount,
+  openClearStoppedConfirm,
+  confirmClearStopped,
+  loadCodeCleanupConfig,
+  saveCodeCleanupConfig,
+  runExpiredCodeCleanup,
+} = useAccountSettings(showAlert)
+
+// 默认方案 tab 内含策略/自动化设置子区，选项需与首页同款 composable 提供
+const {
+  fertilizerLandTypeOptions,
+  fertilizerOptions,
+} = useAutomationSettings({
+  currentAccountId,
+  showAlert,
+})
+
+const {
+  plantingStrategyOptions,
+  bagFallbackStrategyOptions,
+  preferredSeedOptions,
+  bagSeeds,
+  bagSeedsLoading,
+  bagSeedsError,
+  loadStrategyData,
+  fetchBagSeeds,
+} = useStrategySettings({
+  currentAccountId,
+  getAutomationSettings: () => ({ automation: {} }),
+  showAlert,
+})
+
+// 注意：策略设置/自动控制的完整可编辑 UI 也作为首页子 Tab 提供；此处为"默认方案"预设入口
+
+async function applyDefaultPlan(account: any) {
+  if (!account?.id || defaultPlanApplyingId.value)
+    return
+  const accountId = String(account.id)
+  defaultPlanApplyingId.value = accountId
+  try {
+    const { data } = await api.post('/api/settings/default-plan/apply', {}, {
+      headers: { 'x-account-id': accountId },
+    })
+    if (!data?.ok)
+      throw new Error(data?.error || '应用失败')
+    showAlert(`已将默认方案应用到 ${account.name || account.id}`)
+  }
+  catch (error: any) {
+    showAlert(error.response?.data?.error || error.message || '应用默认方案失败', 'danger')
+  }
+  finally {
+    defaultPlanApplyingId.value = ''
+  }
+}
+
+watch(currentAccountId, async () => {
+  settingStore.clearSettingsState()
+  if (currentAccountId.value) {
+    syncLocalOfflineSettings()
+    void loadStrategyData()
+  }
+})
+
+onMounted(async () => {
+  await fetchAccounts()
+  await fetchDeviceProtocol()
+  selectFirstAccountIfNeeded()
+  await scrollActiveTabIntoView()
+})
+</script>
+
+<template>
+  <div class="settings-page">
+    <div class="glass-page">
+      <div class="glass-tabnav">
+        <nav ref="settingsTabsNav" class="flex gap-1 overflow-x-auto p-2">
+          <button
+            v-for="tab in tabs"
+            :key="tab.key"
+            :data-settings-tab="tab.key"
+            class="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-all max-sm:gap-1 max-sm:px-2.5 max-sm:py-1 max-sm:text-xs"
+            :class="activeTab === tab.key
+              ? 'text-white shadow-sm'
+              : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'"
+            :style="activeTab === tab.key ? { backgroundColor: 'var(--theme-primary)' } : {}"
+            @click="activeTab = tab.key"
+          >
+            <div :class="tab.icon" />
+            {{ tab.label }}
+          </button>
+        </nav>
+      </div>
+
+      <div class="p-4 max-sm:p-3">
+        <AccountSettingsTab
+          v-if="activeTab === 'account'"
+          :accounts="accounts"
+          :accounts-loading="accountsLoading"
+          :current-account-id="currentAccountId"
+          :user-is-admin="userIsAdmin"
+          :user-is-super-admin="userIsSuperAdmin"
+          :stopped-accounts-count="stoppedAccountsCount"
+          :is-add-account-disabled="isAddAccountDisabled"
+          :add-account-disabled-reason="addAccountDisabledReason"
+          :is-account-ops-disabled="isAccountOpsDisabled"
+          :show-modal="showModal"
+          :show-delete-confirm="showDeleteConfirm"
+          :delete-loading="deleteLoading"
+          :editing-account="editingAccount"
+          :account-to-delete="accountToDelete"
+          :show-clear-stopped-confirm="showClearStoppedConfirm"
+          :clear-stopped-loading="clearStoppedLoading"
+          :refresh-wx-codes-loading="refreshWxCodesLoading"
+          :show-code-cleanup-modal="showCodeCleanupModal"
+          :code-cleanup-loading="codeCleanupLoading"
+          :code-cleanup-running="codeCleanupRunning"
+          :code-cleanup-config="codeCleanupConfig"
+          :default-plan-applying-id="defaultPlanApplyingId"
+          @add="openAddModal"
+          @clear-stopped="openClearStoppedConfirm"
+          @refresh-wx-codes="refreshWxCodesNow"
+          @open-code-cleanup="openCodeCleanupModal"
+          @close-code-cleanup-modal="showCodeCleanupModal = false"
+          @save-code-cleanup-config="saveCodeCleanupConfig"
+          @run-expired-code-cleanup="runExpiredCodeCleanup"
+          @select="selectAccount"
+          @toggle="toggleAccount"
+          @settings="openSettings"
+          @apply-default-plan="applyDefaultPlan"
+          @edit="openEditModal"
+          @delete="handleDelete"
+          @saved="handleSaved"
+          @close-modal="showModal = false"
+          @close-delete-confirm="showDeleteConfirm = false"
+          @confirm-delete="confirmDelete"
+          @close-clear-stopped-confirm="showClearStoppedConfirm = false"
+          @confirm-clear-stopped="confirmClearStopped"
+        />
+
+        <DefaultPlanSettingsTab
+          v-else-if="activeTab === 'default-plan'"
+          :current-account-id="currentAccountId"
+          :current-account-name="currentAccountName"
+          :planting-strategy-options="plantingStrategyOptions"
+          :preferred-seed-options="preferredSeedOptions"
+          :bag-fallback-strategy-options="bagFallbackStrategyOptions"
+          :bag-seeds="bagSeeds"
+          :bag-seeds-loading="bagSeedsLoading"
+          :bag-seeds-error="bagSeedsError"
+          :fetch-bag-seeds="fetchBagSeeds"
+          :fertilizer-land-type-options="fertilizerLandTypeOptions"
+          :fertilizer-options="fertilizerOptions"
+          @notify="showAlert"
+        />
+
+        <UserSettingsTab
+          v-else-if="activeTab === 'user'"
+          v-model:device-protocol-form="deviceProtocolForm"
+          v-model:selected-device-preset="selectedDevicePreset"
+          v-model:password-form="passwordForm"
+          v-model:offline-config="localOffline"
+          :device-protocol-loading="deviceProtocolLoading"
+          :device-protocol-saving="deviceProtocolSaving"
+          :device-protocol-preset-options="deviceProtocolPresetOptions"
+          :password-saving="passwordSaving"
+          :channel-options="channelOptions"
+          :current-channel-doc-url="currentChannelDocUrl"
+          :offline-saving="offlineSaving"
+          :offline-testing="offlineTesting"
+          @apply-device-preset="applyDevicePreset"
+          @random-mac="fillRandomDeviceMac"
+          @random-device-id="fillRandomDeviceId"
+          @random-imei="fillRandomImei"
+          @save-device-protocol="handleSaveDeviceProtocol"
+          @change-password="handleChangePassword"
+          @open-docs="openChannelDocs"
+          @test-offline="handleTestOffline"
+          @save-offline="handleSaveOffline"
+        />
+
+        <ActivateCardTab
+          v-else-if="activeTab === 'activate-card'"
+          v-model:activate-username="activateUsername"
+          v-model:activate-card-code="activateCardCode"
+          :show-activate-card-confirm="showActivateCardConfirm"
+          :activate-card-loading="activateCardLoading"
+          :current-account-id="currentAccountId"
+          :current-account-name="currentAccountName"
+          @request-activate-card="requestActivateCard"
+          @confirm-activate-card="confirmActivateCard"
+          @close-activate-card-confirm="showActivateCardConfirm = false"
+        />
+      </div>
+    </div>
+
+    <AdminPanel v-if="userStore.isAdmin" class="mt-4" />
+
+    <ConfirmModal
+      :show="modalVisible"
+      :title="modalConfig.title"
+      :message="modalConfig.message"
+      :type="modalConfig.type"
+      :is-alert="modalConfig.isAlert"
+      confirm-text="知道了"
+      @confirm="modalVisible = false"
+      @close="modalVisible = false"
+      @cancel="modalVisible = false"
+    />
+  </div>
+</template>
+
+<style scoped>
+.settings-page {
+  /* App.vue 根容器是 h-screen overflow-hidden，本页必须自带滚动容器，
+     否则后台等子 tab 内容超出屏幕时无法滚动（移动端尤其明显） */
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  /* 恒定预留滚动条空间，避免切换 tab 时内容高度变化导致滚动条出现/消失、画布左右宽度跳动 */
+  scrollbar-gutter: stable;
+}
+
+.glass-page {
+  border-radius: 16px;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: var(--theme-glass);
+  border: 1px solid var(--theme-border);
+}
+
+.glass-tabnav {
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.glass-content :deep(.bg-white),
+.glass-content :deep(.dark\\:bg-gray-800),
+.glass-content :deep(.dark\\:bg-gray-900) {
+  background: var(--theme-glass) !important;
+}
+
+.glass-content :deep(.border-gray-200),
+.glass-content :deep(.dark\\:border-gray-700) {
+  border-color: var(--theme-border) !important;
+}
+
+.glass-content :deep(.shadow-sm),
+.glass-content :deep(.shadow) {
+  box-shadow: none !important;
+}
+</style>
