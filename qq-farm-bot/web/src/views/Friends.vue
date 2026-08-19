@@ -169,6 +169,15 @@ const expandedFriends = ref<Set<string>>(new Set())
 const currentPage = ref(1)
 const pageSize = 25
 
+// 微信账号「获取狗信息」冷却：每 5 分钟只能点击一次
+const DOG_INFO_COOLDOWN_SECONDS = 300
+const dogInfoCooldownSec = ref(0)
+
+useIntervalFn(() => {
+  if (dogInfoCooldownSec.value > 0)
+    dogInfoCooldownSec.value -= 1
+}, 1000)
+
 const isQqAccount = computed(() => {
   const acc = currentAccount.value
   if (!acc)
@@ -395,6 +404,13 @@ async function handleFetchDogInfo() {
   if (friends.value.length === 0) {
     toast.error('好友列表为空，请先刷新好友列表')
     return
+  }
+  if (!isQqAccount.value && dogInfoCooldownSec.value > 0) {
+    toast.error(`操作过于频繁，请 ${dogInfoCooldownSec.value} 秒后再试`)
+    return
+  }
+  if (!isQqAccount.value) {
+    dogInfoCooldownSec.value = DOG_INFO_COOLDOWN_SECONDS
   }
   toast.info('开始获取好友狗信息，请耐心等待，处理中请勿频繁访问好友界面...')
   const result = await friendStore.fetchFriendsDogInfo(currentAccountId.value)
@@ -888,11 +904,16 @@ async function handleBatchAddKnownFriendGids() {
             </button>
             <button
               class="rounded bg-blue-100 px-3 py-1.5 text-sm text-blue-700 transition dark:bg-blue-900/30 hover:bg-blue-200 dark:text-blue-400 disabled:opacity-50 dark:hover:bg-blue-900/50"
-              :disabled="dogInfoLoading || friends.length === 0"
+              :disabled="dogInfoLoading || friends.length === 0 || (!isQqAccount && dogInfoCooldownSec > 0)"
               @click="handleFetchDogInfo"
             >
               <div v-if="dogInfoLoading" class="i-svg-spinners-90-ring-with-bg mr-1 inline-block align-text-bottom" />
-              获取狗信息
+              <template v-if="!isQqAccount && dogInfoCooldownSec > 0">
+                获取狗信息（{{ dogInfoCooldownSec }}s）
+              </template>
+              <template v-else>
+                获取狗信息
+              </template>
             </button>
           </div>
 

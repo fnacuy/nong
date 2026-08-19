@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { useIntervalFn } from '@vueuse/core'
 import { computed, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '@/api'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseTextarea from '@/components/ui/BaseTextarea.vue'
+import { useAccountStore } from '@/stores/account'
 
 const props = defineProps<{
   show: boolean
@@ -12,6 +14,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(['close', 'saved'])
+const router = useRouter()
+const accountStore = useAccountStore()
 const CODE_QUERY_RE = /[?&]code=([^&]+)/i
 const CAPTURE_SUCCESS_STORAGE_KEY = 'capture_login_succeeded'
 
@@ -445,7 +449,7 @@ function failYybQrAndPromptRescan(message: string, expectedGen = yybQrPollGen) {
 }
 
 async function autoAddYybAccountAfterScan(openid: string, nickname?: string) {
-  if (props.editData || !openid)
+  if (!openid)
     return
   yybQrAdding.value = true
   yybQrError.value = ''
@@ -460,13 +464,55 @@ async function autoAddYybAccountAfterScan(openid: string, nickname?: string) {
       return
     }
     const name = yybAccountName.value.trim() || nickname || `应用宝账号${Date.now()}`
-    await addAccount({
-      name,
-      code: data.data.code,
-      platform: 'wx',
-      loginType: 'yyb',
-      yybOpenid: openid,
-    })
+
+    if (props.editData) {
+      await accountStore.updateAccount(String(props.editData.id), {
+        code: data.data.code,
+        name,
+        yybOpenid: openid,
+      })
+      try {
+        await accountStore.startAccount(String(props.editData.id))
+      }
+      catch {
+        // 启动失败不阻止关闭弹窗
+      }
+      emit('saved')
+      close()
+      router.push('/')
+      return
+    }
+
+    await accountStore.fetchAccounts()
+    const existing = accountStore.accounts.find(
+      (acc) => acc.platform === 'wx'
+        && (String(acc.yybOpenid || '') === openid || String(acc.openId || '') === openid),
+    )
+
+    if (existing) {
+      await accountStore.updateAccount(String(existing.id), {
+        code: data.data.code,
+        name,
+        yybOpenid: openid,
+      })
+      try {
+        await accountStore.startAccount(String(existing.id))
+      }
+      catch {
+        // 启动失败不阻止关闭弹窗
+      }
+    } else {
+      await accountStore.addAccount({
+        name,
+        code: data.data.code,
+        platform: 'wx',
+        loginType: 'yyb',
+        yybOpenid: openid,
+      })
+    }
+    emit('saved')
+    close()
+    router.push('/')
   }
   catch (e: any) {
     yybQrError.value = e?.response?.data?.error || e?.message || '自动添加账号失败'
@@ -732,26 +778,15 @@ function resetYybQr() {
 
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-medium" :style="{ color: 'var(--theme-text)' }">平台</label>
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-1 gap-2">
               <button
                 type="button"
-                class="h-9 rounded-lg px-3 text-sm transition-colors"
-                :class="capturePlatform === 'qq' ? 'text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'"
-                :style="capturePlatform === 'qq' ? { background: 'var(--theme-gradient)' } : {}"
+                class="h-9 rounded-lg px-3 text-sm text-white transition-colors"
+                :style="{ background: 'var(--theme-gradient)' }"
                 :disabled="!!captureFlow"
                 @click="capturePlatform = 'qq'"
               >
                 QQ 小程序
-              </button>
-              <button
-                type="button"
-                class="h-9 rounded-lg px-3 text-sm transition-colors"
-                :class="capturePlatform === 'wx' ? 'text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'"
-                :style="capturePlatform === 'wx' ? { background: 'var(--theme-gradient)' } : {}"
-                :disabled="!!captureFlow"
-                @click="capturePlatform = 'wx'"
-              >
-                微信小程序
               </button>
             </div>
           </div>

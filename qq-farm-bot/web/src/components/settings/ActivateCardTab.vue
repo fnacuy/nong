@@ -84,6 +84,26 @@ onMounted(async () => {
             {{ userStore.premiumExpireTimeText }}
           </div>
         </div>
+
+        <div
+          class="border rounded-xl p-3"
+          :class="userStore.isExpired
+            ? 'border-red-200 bg-red-50/60 dark:border-red-800/60 dark:bg-red-900/10'
+            : 'border-blue-200 bg-blue-50/60 dark:border-blue-800/60 dark:bg-blue-900/10'"
+        >
+          <div class="text-xs text-gray-500 dark:text-gray-400">
+            账号到期时间
+          </div>
+          <div
+            class="mt-1 text-sm font-semibold"
+            :class="userStore.isExpired ? 'text-red-700 dark:text-red-300' : 'text-blue-700 dark:text-blue-300'"
+          >
+            {{ userStore.isExpired ? '已到期' : '有效中' }}
+          </div>
+          <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {{ userStore.expireTimeText }}
+          </div>
+        </div>
       </div>
     </div>
 

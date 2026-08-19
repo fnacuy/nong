@@ -13,6 +13,7 @@ export interface CapitalModeConfig {
 const props = defineProps<{
   accountId: string
   accountRunning: boolean
+  fertilizerSmartSeconds?: number
 }>()
 
 const model = defineModel<CapitalModeConfig>('modelValue', { required: true })
@@ -38,13 +39,17 @@ const selectedDogId = computed({
   set: (v) => { model.value = { ...model.value, dogId: v } },
 })
 
+const guardMin = computed(() => Math.max(5, (props.fertilizerSmartSeconds ?? 300) + 30))
+
 const loading = ref(false)
 const ownedDogIds = ref<Set<number>>(new Set())
 const inactiveDogIds = ref<Set<number>>(new Set())
 const dogsLoading = ref(false)
 
 function clampGuardSeconds(value: number) {
-  return Math.max(5, Math.min(300, Math.round(Number(value) || 10)))
+  const smartSeconds = props.fertilizerSmartSeconds ?? 300
+  const min = Math.max(5, smartSeconds + 30)
+  return Math.max(min, Math.min(300, Math.round(Number(value) || 10)))
 }
 
 function isOwned(dogId: number) {
@@ -159,7 +164,7 @@ function toggleDog(id: number) {
             @blur="guardSeconds = clampGuardSeconds(Number(guardSeconds))"
           />
           <p class="mt-1 text-xs text-gray-400">
-            当距离农作物成熟时间 ≤ 此秒数时，自动上阵选中的狗狗（范围 5-300 秒，默认 10 秒）
+            当距离农作物成熟时间 ≤ 此秒数时，自动上阵选中的狗狗（范围 {{ guardMin }}-300 秒，默认比施肥策略大 30 秒）
           </p>
         </div>
 

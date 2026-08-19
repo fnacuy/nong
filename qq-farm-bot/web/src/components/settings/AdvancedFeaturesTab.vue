@@ -60,7 +60,11 @@ const quietModeOptions = [
 let quietSlotSeq = 0
 
 function clampGuardSeconds(value: number) {
-  return Math.max(5, Math.min(300, Math.round(Number(value) || 10)))
+  const s = settingStore.settings
+  const auto = s.automation || {}
+  const smartSeconds = Number(auto.fertilizer_smart_seconds) || 300
+  const min = Math.max(5, smartSeconds + 30)
+  return Math.max(min, Math.min(300, Math.round(Number(value) || 10)))
 }
 
 function syncFromStore() {
@@ -68,7 +72,7 @@ function syncFromStore() {
   const auto = s.automation || {}
   capitalMode.value = {
     enabled: auto.capital_mode === true,
-    guardSeconds: clampGuardSeconds(Number(auto.capital_mode_guard_seconds) || 10),
+    guardSeconds: clampGuardSeconds(Number(auto.capital_mode_guard_seconds) || (Number(auto.fertilizer_smart_seconds) || 300) + 30),
     dogId: Number(auto.capital_mode_dog_id) || 0,
   }
   immersive.value = {
@@ -216,6 +220,7 @@ async function save() {
         v-model="capitalMode"
         :account-id="String(currentAccountId)"
         :account-running="accountRunning"
+        :fertilizer-smart-seconds="Number((settingStore.settings.automation || {}).fertilizer_smart_seconds) || 300"
       />
 
       <!-- 沉浸式务农 -->

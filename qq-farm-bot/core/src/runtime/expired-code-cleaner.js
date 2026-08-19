@@ -34,20 +34,22 @@ function createExpiredCodeCleaner({ store, provider, logger }) {
   function isExpired(account, config, isAccountRunning) {
     if (!account) return false;
 
-    // QQ 端账号（无微信自动刷新标识）：已停止运行即纳入清理
-    if (!hasWxRefreshIdentity(account)) {
-      if (typeof isAccountRunning !== 'function') return false;
-      return !isAccountRunning(String(account.id || ''));
-    }
-
-    // 微信端账号：按失效 code 判定
-    if (!account.code) return true;
-    const failCount = Number(account.codeRefreshFailCount) || 0;
-    if (failCount >= config.failThreshold) return true;
-    const lastRefresh = Number(account.lastCodeRefreshAt) || 0;
-    if (lastRefresh > 0 && Date.now() - lastRefresh > config.retainDays * 24 * 60 * 60 * 1000) {
+    // 已停止运行的账号（不限账号类型）一律纳入清理
+    if (typeof isAccountRunning === 'function' && !isAccountRunning(String(account.id || ''))) {
       return true;
     }
+
+    // 微信端账号（运行中）：按失效 code 判定
+    if (hasWxRefreshIdentity(account)) {
+      if (!account.code) return true;
+      const failCount = Number(account.codeRefreshFailCount) || 0;
+      if (failCount >= config.failThreshold) return true;
+      const lastRefresh = Number(account.lastCodeRefreshAt) || 0;
+      if (lastRefresh > 0 && Date.now() - lastRefresh > config.retainDays * 24 * 60 * 60 * 1000) {
+        return true;
+      }
+    }
+
     return false;
   }
 
@@ -61,6 +63,7 @@ function createExpiredCodeCleaner({ store, provider, logger }) {
     for (const account of targets) {
       const accountId = String(account.id || '');
       try {
+        const wasRunning = provider.isAccountRunning(String(accountId));
         if (provider.stopWorker) {
           provider.stopWorker(accountId);
         } else if (provider.stopAccount) {
@@ -69,7 +72,7 @@ function createExpiredCodeCleaner({ store, provider, logger }) {
         store.deleteAccount(accountId);
         deletedIds.push(accountId);
         if (provider.addAccountLog) {
-          const kind = hasWxRefreshIdentity(account) ? '失效 Code' : '已停止 QQ';
+          const kind = wasRunning ? '失效 Code' : '已停止';
           provider.addAccountLog(
             'code_cleanup',
             `清理${kind}账号: ${account.name || accountId}`,

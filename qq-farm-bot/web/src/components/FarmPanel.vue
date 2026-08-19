@@ -25,6 +25,7 @@ const confirmConfig = ref({
   message: '',
   opType: '',
   bulkAction: '' as 'removeAll' | '',
+  fertilizeAllType: '' as 'normal' | 'organic' | '',
   landAction: '' as PendingLandAction | '',
   land: null as any | null,
   type: 'primary' as 'primary' | 'danger',
@@ -34,13 +35,15 @@ async function executeOperate() {
   if (!currentAccountId.value)
     return
   const config = confirmConfig.value
-  if (!config.opType && !config.bulkAction && (!config.landAction || !config.land))
+  if (!config.opType && !config.bulkAction && !config.fertilizeAllType && (!config.landAction || !config.land))
     return
   confirmVisible.value = false
   operating.value = true
   try {
     if (config.opType)
       await farmStore.operate(currentAccountId.value, config.opType)
+    else if (config.fertilizeAllType)
+      await farmStore.fertilizeAll(currentAccountId.value, config.fertilizeAllType)
     else if (config.bulkAction === 'removeAll')
       await farmStore.removeAllPlants(currentAccountId.value)
     else if (config.landAction === 'fertilize')
@@ -55,16 +58,21 @@ function handleOperate(opType: string) {
   if (!currentAccountId.value)
     return
   const confirmMap: Record<string, string> = {
-    harvest: '确定要收获所有成熟作物吗？',
-    clear: '确定要执行一键务农吗？将自动浇水、除草、除虫。',
+    fertilizeAllNormal: '确定要对所有土地使用无机肥吗？',
+    fertilizeAllOrganic: '确定要对所有土地使用有机肥吗？',
     plant: '确定要一键种植吗？(根据策略配置)',
     upgrade: '确定要升级所有可升级的土地吗？(消耗金币)',
     all: '确定要执行一键全收吗？将依次执行收获、务农、种植与升级。',
   }
+  const fertTypeMap: Record<string, 'normal' | 'organic'> = {
+    fertilizeAllNormal: 'normal',
+    fertilizeAllOrganic: 'organic',
+  }
   confirmConfig.value = {
     title: '确认操作',
     message: confirmMap[opType] || '确定执行此操作吗？',
-    opType,
+    opType: fertTypeMap[opType] ? '' : opType,
+    fertilizeAllType: fertTypeMap[opType] || '',
     bulkAction: '',
     landAction: '',
     land: null,
@@ -80,6 +88,7 @@ function handleRemoveAllPlants() {
     title: '确认一键铲除',
     message: '确定要铲除全部已种植作物吗？此操作不可恢复。',
     opType: '',
+    fertilizeAllType: '',
     bulkAction: 'removeAll',
     landAction: '',
     land: null,
@@ -97,6 +106,7 @@ function handleLandFertilize(land: any) {
     title: '确认催熟',
     message: `确定要对 ${getLandActionName(land)} 使用有机肥料催熟吗？`,
     opType: '',
+    fertilizeAllType: '',
     bulkAction: '',
     landAction: 'fertilize',
     land,
@@ -112,6 +122,7 @@ function handleLandRemove(land: any) {
     title: '确认铲除',
     message: `确定要铲除 ${getLandActionName(land)} 吗？此操作不可恢复。`,
     opType: '',
+    fertilizeAllType: '',
     bulkAction: '',
     landAction: 'remove',
     land,
@@ -121,8 +132,8 @@ function handleLandRemove(land: any) {
 }
 
 const operations = [
-  { type: 'harvest', label: '收获', icon: 'i-carbon-wheat' },
-  { type: 'clear', label: '一键务农', icon: 'i-carbon-clean' },
+  { type: 'fertilizeAllNormal', label: '一键无机肥', icon: 'i-carbon-chemistry' },
+  { type: 'fertilizeAllOrganic', label: '一键有机肥', icon: 'i-carbon-chemistry' },
   { type: 'plant', label: '种植', icon: 'i-carbon-sprout' },
   { type: 'upgrade', label: '升级土地', icon: 'i-carbon-upgrade' },
   { type: 'all', label: '一键全收', icon: 'i-carbon-flash' },
@@ -297,15 +308,15 @@ onUnmounted(() => { pause(); pauseRefresh() })
   line-height: 1;
 }
 
-.act-harvest {
-  background: color-mix(in srgb, var(--theme-accent) 8%, transparent);
-  border-color: color-mix(in srgb, var(--theme-accent) 18%, transparent);
-  color: var(--theme-accent);
+.act-fertilizeAllNormal {
+  background: color-mix(in srgb, #84cc16 8%, transparent);
+  border-color: color-mix(in srgb, #84cc16 18%, transparent);
+  color: #84cc16;
 }
-.act-clear {
-  background: color-mix(in srgb, #14b8a6 8%, transparent);
-  border-color: color-mix(in srgb, #14b8a6 18%, transparent);
-  color: #14b8a6;
+.act-fertilizeAllOrganic {
+  background: color-mix(in srgb, #10b981 8%, transparent);
+  border-color: color-mix(in srgb, #10b981 18%, transparent);
+  color: #10b981;
 }
 .act-plant {
   background: color-mix(in srgb, var(--theme-primary) 8%, transparent);

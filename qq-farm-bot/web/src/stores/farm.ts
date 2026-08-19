@@ -87,6 +87,16 @@ export const useFarmStore = defineStore('farm', () => {
     return data
   }
 
+  async function fertilizeAll(accountId: string, fertilizerType: 'normal' | 'organic') {
+    if (!accountId)
+      return
+    const { data } = await api.post('/api/land/fertilize-all', { fertilizerType }, {
+      headers: { 'x-account-id': accountId },
+    })
+    await fetchLands(accountId)
+    return data
+  }
+
   async function removePlant(accountId: string, landId: number) {
     if (!accountId)
       return
@@ -107,5 +117,5 @@ export const useFarmStore = defineStore('farm', () => {
     return data
   }
 
-  return { lands, summary, seeds, loading, clearFarmData, fetchLands, fetchSeeds, operate, fertilizeLand, removePlant, removeAllPlants }
+  return { lands, summary, seeds, loading, clearFarmData, fetchLands, fetchSeeds, operate, fertilizeLand, fertilizeAll, removePlant, removeAllPlants }
 })

@@ -20,8 +20,7 @@ import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseSelect from '@/components/ui/BaseSelect.vue'
 import { useAutomationSettings } from '@/composables/settings/useAutomationSettings'
 import { useStrategySettings } from '@/composables/settings/useStrategySettings'
-import { useAccountStore } from '@/stores/account'
-import { useAppStore } from '@/stores/app'
+import { useAccountStore, getPlatformClass, getPlatformLabel } from '@/stores/account'
 import { useBagStore } from '@/stores/bag'
 import { useSettingStore } from '@/stores/setting'
 import { useStatusStore } from '@/stores/status'
@@ -45,16 +44,12 @@ const {
 const { currentAccountId, currentAccount } = storeToRefs(accountStore)
 const { dashboardItems } = storeToRefs(bagStore)
 
+const platformLabel = computed(() => getPlatformLabel(currentAccount.value?.platform))
+const platformClass = computed(() => getPlatformClass(currentAccount.value?.platform))
+
 const showAccountDropdown = ref(false)
 const showAccountModal = ref(false)
 const showCareerModal = ref(false)
-const appStore = useAppStore()
-const startBtnStyle = computed(() => appStore.isDark
-  ? { background: 'linear-gradient(135deg, #1e3a8a, #3730a3)', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.4)' }
-  : { background: 'linear-gradient(135deg, #3b82f6, #6366f1)', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)' })
-const startAllLoading = ref(false)
-const startAllResults = ref<{ name: string, ok: boolean, msg: string }[]>([])
-const showStartAllModal = ref(false)
 const accountToEdit = ref<any>(null)
 
 function openCareerModal() {
@@ -80,63 +75,7 @@ function closeAccountDropdown(e: MouseEvent) {
 async function handleAccountSaved() {
   showAccountModal.value = false
   accountToEdit.value = null
-  await accountStore.fetchAccounts()
-}
-
-// 一键启动
-const allAccountsRunning = computed(() => {
-  const accs = accountStore.accounts
-  return accs.length > 0 && accs.every(a => a.running)
-})
-
-async function startAllAccounts() {
-  if (startAllLoading.value)
-    return
-  startAllLoading.value = true
-  startAllResults.value = []
-
-  const accs = accountStore.accounts
-  const toStart = accs.filter(a => !a.running)
-
-  if (toStart.length === 0) {
-    // 全部在线，执行全部停止
-    for (const acc of accs) {
-      try {
-        await accountStore.stopAccount(String(acc.id))
-        startAllResults.value.push({ name: acc.name || acc.nick || acc.id, ok: true, msg: '已停止' })
-      }
-      catch {
-        startAllResults.value.push({ name: acc.name || acc.nick || acc.id, ok: false, msg: '停止失败' })
-      }
-    }
-  }
-  else {
-    // 启动所有离线账号
-    for (const acc of toStart) {
-      try {
-        await api.post(`/api/accounts/${acc.id}/start`)
-      }
-      catch {
-        startAllResults.value.push({ name: acc.name || acc.nick || acc.id, ok: false, msg: '启动失败，请重新扫码' })
-      }
-    }
-    // 等待 5 秒后检查实际运行状态
-    await new Promise(r => setTimeout(r, 5000))
-    await accountStore.fetchAccounts()
-    const latest = accountStore.accounts
-    for (const acc of toStart) {
-      const updated = latest.find(a => String(a.id) === String(acc.id))
-      if (updated?.running) {
-        startAllResults.value.push({ name: acc.name || acc.nick || acc.id, ok: true, msg: '启动成功' })
-      }
-      else {
-        startAllResults.value.push({ name: acc.name || acc.nick || acc.id, ok: false, msg: '启动失败，请重新扫码' })
-      }
-    }
-  }
-
-  startAllLoading.value = false
-  showStartAllModal.value = true
+  accountStore.fetchAccounts()
 }
 
 // 当前账号的微信昵称（去括号备注）
@@ -846,7 +785,7 @@ useIntervalFn(updateCountdowns, 1000)
       </linearGradient>
     </defs>
   </svg>
-  <div ref="panelEl" class="flex flex-col gap-2 overflow-x-hidden pt-1 md:pt-2" @touchstart="onSwipeStart" @touchend="onSwipeEnd">
+  <div ref="panelEl" class="flex flex-col gap-2 overflow-x-hidden pt-1 md:pt-2 pb-20" @touchstart="onSwipeStart" @touchend="onSwipeEnd">
     <!-- 首页子标签导航 -->
 
     <div class="sticky top-0 z-30 px-1 pt-1 -mx-1" style="transform: translateZ(0);">
@@ -865,7 +804,7 @@ useIntervalFn(updateCountdowns, 1000)
       <!-- 合并账号面板 -->
       <div class="overview-card">
         <div class="flex flex-col">
-          <!-- 第一行：主题切换 + 居中标题 -->
+          <!-- 第一行：主题切换 + 居中标题 + 平台标识 -->
           <div class="flex items-center border-b border-gray-100/80 px-5 py-3 dark:border-gray-700/80">
             <!-- 主题切换按钮 左 -->
             <ThemeToggle class="mr-2 shrink-0" />
@@ -873,22 +812,14 @@ useIntervalFn(updateCountdowns, 1000)
               <div class="i-fas-user-circle text-blue-500" />
               <span class="text-sm text-gray-700 font-semibold dark:text-gray-200">QQ农场智能助手</span>
             </div>
-            <button
-              class="relative h-8 w-16 flex items-center justify-between rounded-full px-1.5 transition-all duration-300"
-              :style="startBtnStyle"
-              :disabled="startAllLoading"
-              :title="startAllLoading ? '启动中' : (allAccountsRunning ? '停止' : '一键启动')"
-              @click="startAllAccounts"
+            <!-- 平台标识 右 -->
+            <span
+              v-if="platformLabel"
+              :class="platformClass"
+              class="ml-2 shrink-0 rounded px-2 py-0.5 text-xs font-medium"
             >
-              <div
-                class="h-6 w-6 flex transform items-center justify-center rounded-full shadow-md transition-all duration-300"
-                :class="[allAccountsRunning ? 'translate-x-[18px]' : 'translate-x-0', appStore.isDark ? 'bg-slate-700' : 'bg-white']"
-              >
-                <span v-if="startAllLoading" class="i-svg-spinners-90-ring-with-bg text-sm text-blue-500" />
-                <span v-else-if="allAccountsRunning" class="i-carbon-stop-filled text-sm text-blue-600" />
-                <span v-else class="i-carbon-play text-sm text-blue-600" />
-              </div>
-            </button>
+              {{ platformLabel }}端
+            </span>
           </div>
 
           <!-- 第二行：头像 + 数据 -->
@@ -1240,41 +1171,41 @@ useIntervalFn(updateCountdowns, 1000)
     </div>
 
     <!-- 农场（复用 FarmPanel） -->
-    <div v-show="activeTab === 'farm'" class="h-full">
+    <div v-show="activeTab === 'farm'" class="h-full pb-20">
       <FarmPanel />
     </div>
 
     <!-- 背包（复用 BagPanel） -->
-    <div v-show="activeTab === 'bag'" class="h-full">
+    <div v-show="activeTab === 'bag'" class="h-full pb-20">
       <BagPanel />
     </div>
 
     <!-- 好友（复用 FriendsFriendList） -->
-    <div v-show="activeTab === 'friends'" class="h-full">
+    <div v-show="activeTab === 'friends'" class="h-full pb-20">
       <FriendsTabContent />
     </div>
 
     <!-- 任务（复用 TaskPanel） -->
-    <div v-show="activeTab === 'tasks'" class="h-full">
+    <div v-show="activeTab === 'tasks'" class="h-full pb-20">
       <TaskPanel />
     </div>
 
     <!-- 宠物（护主犬同气礼包） -->
-    <div v-show="activeTab === 'pet'" class="h-full">
+    <div v-show="activeTab === 'pet'" class="h-full pb-20">
       <div class="space-y-4">
         <PetPanel
           :account-id="currentAccountId"
-          :account-running="allAccountsRunning"
+          :account-running="!!currentAccount?.running"
         />
         <DogGiftsPanel
           :account-id="currentAccountId"
-          :account-running="allAccountsRunning"
+          :account-running="!!currentAccount?.running"
         />
       </div>
     </div>
 
     <!-- 自动控制（完整设置） -->
-    <div v-show="activeTab === 'automation'" class="h-full">
+    <div v-show="activeTab === 'automation'" class="h-full pb-20">
       <AutomationSettingsTab
         v-model:settings="localAutomationSettings"
         :current-account-name="currentAccount?.nick || currentAccount?.name || ''"
@@ -1288,7 +1219,7 @@ useIntervalFn(updateCountdowns, 1000)
     </div>
 
     <!-- 策略设置（完整设置） -->
-    <div v-show="activeTab === 'strategy'" class="h-full">
+    <div v-show="activeTab === 'strategy'" class="h-full pb-20">
       <StrategySettingsTab
         v-model:settings="localStrategySettings"
         :current-account-name="currentAccount?.nick || currentAccount?.name || ''"
@@ -1314,12 +1245,12 @@ useIntervalFn(updateCountdowns, 1000)
     </div>
 
     <!-- 图鉴 -->
-    <div v-show="activeTab === 'illustrated'" class="illustrated-container h-full">
+    <div v-show="activeTab === 'illustrated'" class="illustrated-container h-full pb-20">
       <Illustrated />
     </div>
 
     <!-- 分析 -->
-    <div v-show="activeTab === 'analytics'" class="analytics-container h-full">
+    <div v-show="activeTab === 'analytics'" class="analytics-container h-full pb-20">
       <Analytics />
     </div>
   </div>
@@ -1335,34 +1266,6 @@ useIntervalFn(updateCountdowns, 1000)
   </Teleport>
 
   <!-- 一键启动结果弹窗 -->
-  <Teleport to="body">
-    <Transition name="fade">
-      <div v-if="showStartAllModal" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" @click.self="showStartAllModal = false">
-        <div class="glass-card max-w-sm w-full rounded-2xl p-5">
-          <h3 class="mb-4 text-center text-base font-bold">
-            🚀 一键启动结果
-          </h3>
-          <div class="flex flex-col gap-2">
-            <div
-              v-for="(r, i) in startAllResults"
-              :key="i"
-              class="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm"
-              :class="r.ok ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300' : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'"
-            >
-              <div class="h-5 w-5 flex items-center justify-center rounded-full text-xs text-white font-bold" :class="r.ok ? 'bg-green-500' : 'bg-red-500'">
-                {{ r.ok ? '✓' : '✕' }}
-              </div>
-              <span class="font-medium">{{ r.name }}</span>
-              <span class="ml-auto text-xs opacity-75">{{ r.msg }}</span>
-            </div>
-          </div>
-          <button class="mt-4 w-full rounded-xl bg-blue-500 py-2.5 text-sm text-white font-semibold transition-colors hover:bg-blue-600" @click="showStartAllModal = false">
-            确定
-          </button>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
 </template>
 
 <style scoped>

@@ -12,6 +12,7 @@ export interface Account {
   wxid?: string
   gid?: string | number
   openId?: string
+  yybOpenid?: string
   avatar?: string
   avatarUrl?: string
   username?: string

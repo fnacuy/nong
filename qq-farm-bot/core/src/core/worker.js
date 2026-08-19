@@ -24,6 +24,7 @@ const {
     getAvailableSeeds,
     runFarmOperation,
     runFertilizerByConfig,
+    NORMAL_FERTILIZER_ID,
     ORGANIC_FERTILIZER_ID,
     fertilize,
     removePlant
@@ -738,6 +739,23 @@ function applyRuntimeConfig(config, syncStatusAfter = false) {
                 });
             }
 
+            // 资本模式开启或切换守护狗狗 → 立即下掉手动上阵/残留的狗，确保由资本模式掌控
+            const capitalModeChanged = (
+                prevAuto?.capital_mode !== newAuto?.capital_mode
+            ) || (
+                newAuto?.capital_mode && prevAuto?.capital_mode_dog_id !== newAuto?.capital_mode_dog_id
+            );
+            if (capitalModeChanged || newAuto?.capital_mode) {
+                workerScheduler.setTimeoutTask('capital_dog_recall_after_save', 2000, async () => {
+                    try {
+                        const { recallDeployedDogIfNotCapital } = require('../services/dog');
+                        await recallDeployedDogIfNotCapital();
+                    } catch (err) {
+                        console.warn('[资本模式] 配置保存后自动下狗检查失败:', err.message);
+                    }
+                });
+            }
+
             const mysteryShopConfigChanged = [
                 'mystery_shop_auto_buy',
                 'mystery_shop_allow_gold',
@@ -1419,6 +1437,30 @@ async function handleApiCall(msg) {
                         module: 'farm', event: '一键铲除', result: 'ok', count: occupiedLands.length
                     });
                     result = { removed: occupiedLands.length };
+                }
+                break;
+            }
+            case 'fertilizeAll': {
+                const fertType = args[0] || 'normal';
+                const fertId = fertType === 'organic' ? ORGANIC_FERTILIZER_ID : NORMAL_FERTILIZER_ID;
+                const fertName = fertType === 'organic' ? '有机肥' : '无机肥';
+                const landsDetail = await getLandsDetail();
+                const lands = landsDetail?.lands || [];
+                const occupiedLands = lands
+                    .filter(l => l && l.unlocked && l.status !== 'empty' && l.status !== 'locked')
+                    .map(l => l.id);
+
+                if (occupiedLands.length === 0) {
+                    result = { count: 0, message: '没有可施肥的土地' };
+                } else {
+                    log('施肥', `正在对 ${  occupiedLands.length  } 块土地使用${  fertName  }`, {
+                        module: 'farm', event: '一键施肥', fertilizer: fertType, count: occupiedLands.length
+                    });
+                    const fertilizeCount = await fertilize(occupiedLands, fertId);
+                    log('施肥', `${  fertName  }施肥完成，成功 ${  fertilizeCount  }/${  occupiedLands.length  } 块`, {
+                        module: 'farm', event: '一键施肥', result: fertilizeCount > 0 ? 'ok' : 'error', fertilizer: fertType, count: fertilizeCount
+                    });
+                    result = { count: fertilizeCount, total: occupiedLands.length };
                 }
                 break;
             }

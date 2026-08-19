@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import AccountModal from '@/components/AccountModal.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -6,7 +7,7 @@ import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseSwitch from '@/components/ui/BaseSwitch.vue'
 import { getPlatformClass, getPlatformLabel } from '@/stores/account'
 
-defineProps<{
+const props = defineProps<{
   accounts: any[]
   accountsLoading: boolean
   currentAccountId: string | number | null | undefined
@@ -59,6 +60,17 @@ const emit = defineEmits<{
   closeClearStoppedConfirm: []
   confirmClearStopped: []
 }>()
+
+const accountFilter = ref<'all' | 'running' | 'stopped'>('all')
+
+const filteredAccounts = computed(() => {
+  const accs = props.accounts
+  if (accountFilter.value === 'running')
+    return accs.filter(a => a.running)
+  if (accountFilter.value === 'stopped')
+    return accs.filter(a => !a.running)
+  return accs
+})
 
 function accountAvatar(acc: any) {
   const direct = String(acc?.avatar || acc?.avatarUrl || acc?.avatar_url || '').trim()
@@ -124,12 +136,39 @@ function accountAvatar(acc: any) {
       </div>
     </div>
 
+    <div v-if="userIsAdmin" class="flex gap-2">
+      <BaseButton
+        variant="outline"
+        size="sm"
+        :class="{ '!bg-blue-500 !text-white !border-blue-500': accountFilter === 'running' }"
+        @click="accountFilter = 'running'"
+      >
+        运行中
+      </BaseButton>
+      <BaseButton
+        variant="outline"
+        size="sm"
+        :class="{ '!bg-red-500 !text-white !border-red-500': accountFilter === 'stopped' }"
+        @click="accountFilter = 'stopped'"
+      >
+        已停止
+      </BaseButton>
+      <BaseButton
+        v-if="accountFilter !== 'all'"
+        variant="ghost"
+        size="sm"
+        @click="accountFilter = 'all'"
+      >
+        全部
+      </BaseButton>
+    </div>
+
     <div v-if="accountsLoading && accounts.length === 0" class="py-8 text-center text-gray-500">
       <div i-svg-spinners-90-ring-with-bg class="mb-2 inline-block text-2xl" />
       <div>加载中...</div>
     </div>
 
-    <div v-else-if="accounts.length === 0" class="rounded-lg bg-white py-12 text-center shadow dark:bg-gray-800">
+    <div v-else-if="filteredAccounts.length === 0" class="rounded-lg bg-white py-12 text-center shadow dark:bg-gray-800">
       <div i-carbon-user-avatar class="mb-4 inline-block text-4xl text-gray-400" />
       <p class="mb-4 text-gray-500">
         暂无账号
@@ -147,7 +186,7 @@ function accountAvatar(acc: any) {
 
     <div v-else class="grid grid-cols-1 gap-4 lg:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4">
       <div
-        v-for="acc in accounts"
+        v-for="acc in filteredAccounts"
         :key="acc.id"
         class="cursor-pointer border rounded-lg bg-white p-3 shadow transition-all duration-200 dark:bg-gray-800 sm:p-4"
         :class="String(currentAccountId) === String(acc.id)

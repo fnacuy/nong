@@ -227,7 +227,7 @@ const DEFAULT_AUTOMATION = {
     mystery_shop_allow_coupon: false,
     mystery_shop_allow_gold_bean: false,
     capital_mode: false,
-    capital_mode_guard_seconds: 10,
+    capital_mode_guard_seconds: 300,
     capital_mode_dog_id: 0,
     sell: false,
     fertilizer: 'smart_normal',
@@ -629,6 +629,13 @@ function normalizeAccountConfig(raw, fallbackConfig = accountFallbackConfig) {
                 cfg.automation[key] = !!value;
             }
         }
+    }
+
+    // 资本模式成熟前放狗秒数必须大于施肥策略快成熟判定秒数 30s
+    const smartSeconds = cfg.automation.fertilizer_smart_seconds;
+    const minGuard = Math.min(300, smartSeconds + 30);
+    if (cfg.automation.capital_mode_guard_seconds < minGuard) {
+        cfg.automation.capital_mode_guard_seconds = minGuard;
     }
 
     // 自动刷新 Code

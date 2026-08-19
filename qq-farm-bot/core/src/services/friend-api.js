@@ -290,8 +290,8 @@ function getEffectiveKnownQqFriendGids() {
 }
 
 /**
- * On first login, seed known friend GIDs from recent visitor records.
- * Only runs once per session.
+ * Seed/merge known friend GIDs from recent visitor records.
+ * Runs once per session, merges new visitor GIDs into existing list.
  */
 async function syncKnownFriendGidsFromRecentVisitorsOnce() {
   if (hasInitializedFromVisitors) return getEffectiveKnownQqFriendGids();
@@ -299,16 +299,10 @@ async function syncKnownFriendGidsFromRecentVisitorsOnce() {
   const accountId = process.env.FARM_ACCOUNT_ID || '';
   const existingGids = normalizeFriendGids(getKnownFriendGids());
 
-  // If we already have known GIDs, skip visitor seeding
-  if (existingGids.length > 0) {
-    hasInitializedFromVisitors = true;
-    return getEffectiveKnownQqFriendGids();
-  }
-
   try {
-    log('好友', '首次登录，尝试从访客记录获取好友GID...', {
+    log('好友', '从访客记录同步好友GID...', {
       module: 'friend',
-      event: '首次获取好友GID',
+      event: '访客记录同步好友GID',
     });
 
     const interactRecords = await getInteractRecords();
@@ -321,16 +315,18 @@ async function syncKnownFriendGidsFromRecentVisitorsOnce() {
     hasInitializedFromVisitors = true;
 
     if (visitorGids.length === 0) {
-      log('好友', '访客记录为空，无法获取好友GID', {
+      log('好友', '访客记录为空，跳过同步', {
         module: 'friend',
-        event: '首次获取好友GID',
+        event: '访客记录同步好友GID',
         result: 'empty',
       });
       return getEffectiveKnownQqFriendGids();
     }
 
-    const mergedGids = normalizeFriendGids([...visitorGids]);
-    if (mergedGids.length > 0) {
+    const mergedGids = normalizeFriendGids([...existingGids, ...visitorGids]);
+    const newCount = mergedGids.length - existingGids.length;
+
+    if (newCount > 0) {
       applyConfigSnapshot({ knownFriendGids: mergedGids }, {
         persist: false,
         accountId,
@@ -348,20 +344,27 @@ async function syncKnownFriendGidsFromRecentVisitorsOnce() {
         });
       }
 
-      log('好友', `首次登录从访客获取 ${mergedGids.length} 个好友GID`, {
+      log('好友', `从访客记录新增 ${newCount} 个好友GID（总计 ${mergedGids.length}）`, {
         module: 'friend',
-        event: '首次获取好友GID',
+        event: '访客记录同步好友GID',
         result: 'ok',
-        count: mergedGids.length,
+        newCount,
+        totalCount: mergedGids.length,
+      });
+    } else {
+      log('好友', '访客记录无新GID需要合并', {
+        module: 'friend',
+        event: '访客记录同步好友GID',
+        result: 'no_new',
       });
     }
 
     return getEffectiveKnownQqFriendGids();
   } catch (err) {
     hasInitializedFromVisitors = true;
-    logWarn('好友', `首次获取好友GID失败: ${err.message}`, {
+    logWarn('好友', `从访客记录同步好友GID失败: ${err.message}`, {
       module: 'friend',
-      event: '首次获取好友GID',
+      event: '访客记录同步好友GID',
       result: 'error',
     });
     return getEffectiveKnownQqFriendGids();

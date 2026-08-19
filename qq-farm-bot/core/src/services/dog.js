@@ -213,6 +213,26 @@ async function deployCapitalDog(dogId) {
 }
 
 /**
+ * 资本模式开启时：自动下掉当前上阵的所有狗（手动上阵/残留/其他），
+ * 确保放狗/收狗完全由资本模式掌控，避免与手动上阵互相顶替。
+ */
+async function recallDeployedDogIfNotCapital() {
+    if (capitalDogDeployedId > 0 || capitalDogDeploying) return;
+    const dogInfo = await getDogInfo();
+    if (!dogInfo || !dogInfo.ok) return;
+    const activeDog = (dogInfo.dogs || []).find(d => toNum(d.active) === 1);
+    if (!activeDog) return;
+    const activeId = toNum(activeDog.id);
+    if (activeId <= 0) return;
+    const result = await withdrawDog(activeId);
+    if (result.ok) {
+        log('资本模式', `已自动下掉当前上阵的狗狗 #${activeId}`, { module: 'dog', event: '资本模式下狗', result: 'ok', dogId: activeId });
+    } else {
+        logWarn('资本模式', `自动下掉上阵狗狗 #${activeId} 失败: ${result.error}`, { module: 'dog', event: '资本模式下狗', result: 'error', dogId: activeId });
+    }
+}
+
+/**
  * 收获完成后调用：延迟 CAPITAL_MODE_RECALL_DELAY_MS 后召回狗狗。
  */
 function scheduleCapitalDogRecall() {
@@ -239,6 +259,10 @@ async function checkCapitalModeOnFarm(lands) {
     }
     const config = getCapitalModeConfig();
     if (!config.enabled || config.dogId <= 0) return { ok: true, skipped: true };
+
+    // 资本模式开启：先自动下掉当前上阵的非资本模式狗（手动上阵/残留）
+    await recallDeployedDogIfNotCapital();
+
     if (capitalDogDeployedId > 0 || capitalDogDeploying) return { ok: true, skipped: true };
 
     const list = Array.isArray(lands) ? lands : [];
@@ -292,6 +316,7 @@ module.exports = {
     isCapitalDogDeployed,
     getCapitalDogDeployedId,
     checkCapitalModeOnFarm,
+    recallDeployedDogIfNotCapital,
     scheduleCapitalDogRecall,
     recallCapitalDog,
     resetCapitalModeState,

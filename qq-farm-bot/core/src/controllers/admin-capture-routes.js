@@ -717,19 +717,60 @@ function registerAdminCaptureRoutes({
       const allAccounts = store.getAccounts().accounts;
       const duplicate = findDuplicateCapturedAccount(allAccounts, flow, flow.accountId);
       if (duplicate) {
-        flow.cancelled = true;
-        captureFlows.delete(flow.id);
-        logger.warn("抓包登录检测到重复账号，已停止本次添加", {
+        logger.info("抓包登录检测到已有账号，更新 Code", {
           owner: flow.owner,
           platform: flow.platform,
           duplicateAccountId: duplicate.id,
         });
-        res.status(409).json({
-          ok: false,
-          code: "DUPLICATE_CAPTURE_ACCOUNT",
-          error: "检测到当前仍是已添加的账号，请先切换到目标 QQ，再重新开始抓取",
+        const dupWasRunning = provider.isAccountRunning
+          ? provider.isAccountRunning(duplicate.id)
+          : false;
+        const dupName = String(req.body?.name || "").trim() || duplicate.name || "";
+        store.addOrUpdateAccount({
+          id: duplicate.id,
+          name: dupName,
+          code: flow.code,
+          platform: flow.platform,
+          loginType: "capture",
+          ...(flow.accountGid ? { gid: flow.accountGid } : {}),
+          ...(flow.openId ? { openId: flow.openId } : {}),
         });
-        scheduleRemoteStop(store, flow, 0, logger);
+        if (provider.addAccountLog) {
+          provider.addAccountLog(
+            "update",
+            `抓包登录更新账号 Code: ${dupName || duplicate.id}`,
+            duplicate.id,
+            dupName,
+            { platform: flow.platform },
+          );
+        }
+        flow.completed = true;
+        flow.result = {
+          accountId: duplicate.id,
+          name: dupName,
+          platform: flow.platform,
+          importedFriendCount: 0,
+          startError: "",
+          updated: true,
+        };
+        flow.updatedAt = Date.now();
+        res.json({ ok: true, data: flow.result });
+        const startAccount = () => scheduleCapturedAccountStart({
+          provider,
+          logger,
+          flow,
+          account: { ...duplicate, name: dupName },
+          isUpdate: true,
+          wasRunning: dupWasRunning,
+        });
+        void stopCaptureBeforeAccountStart(store, flow, startAccount).catch((error) => {
+          logger.warn("抓包服务代理释放失败，账号未启动", {
+            owner: flow.owner,
+            accountId: duplicate.id,
+            remoteSessionId: flow.remoteSessionId,
+            error: error.message,
+          });
+        });
         return;
       }
       if (!isUpdate && !isAdminUser(currentUser)) {

@@ -2,6 +2,7 @@
 import type { Account } from '@/stores/account'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
+import { useRouter } from 'vue-router'
 import AccountModal from '@/components/AccountModal.vue'
 import RemarkModal from '@/components/RemarkModal.vue'
 import { useAddAccountGate } from '@/composables/useAddAccountGate'
@@ -12,6 +13,7 @@ import { useUserStore } from '@/stores/user'
 const accountStore = useAccountStore()
 const statusStore = useStatusStore()
 const userStore = useUserStore()
+const router = useRouter()
 const { accounts, currentAccount } = storeToRefs(accountStore)
 const { isAddAccountDisabled, addAccountDisabledReason } = useAddAccountGate()
 const { currentStatusReady, status } = storeToRefs(statusStore)
@@ -195,10 +197,11 @@ function openRemarkModal(acc: any) {
 }
 
 async function handleAccountSaved() {
-  await accountStore.fetchAccounts()
   showAccountModal.value = false
   showRemarkModal.value = false
   accountToEdit.value = null
+  router.push('/')
+  accountStore.fetchAccounts()
 }
 
 function openRenewModal() {

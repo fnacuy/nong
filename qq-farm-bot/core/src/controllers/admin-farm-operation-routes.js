@@ -74,6 +74,24 @@ function registerAdminFarmOperationRoutes({
     }
   });
 
+  app.post("/api/land/fertilize-all", async (req, res) => {
+    const accountId = requireAccountAccess({
+      req,
+      res,
+      getAccountIdFromRequest,
+      canAccessAccount,
+    });
+    if (!accountId) return;
+
+    try {
+      const { fertilizerType } = req.body || {};
+      const data = await provider.fertilizeAll(accountId, fertilizerType);
+      res.json({ ok: true, data });
+    } catch (error) {
+      sendProviderError(res, error);
+    }
+  });
+
   app.post("/api/land/remove", async (req, res) => {
     const accountId = requireAccountAccess({
       req,

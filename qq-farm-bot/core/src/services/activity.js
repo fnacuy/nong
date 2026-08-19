@@ -497,15 +497,20 @@ async function sendQixiSachet(friendGid, count = 1) {
   if (!before.gift.enabled || before.gift.remainingCount <= 0) throw new Error('今日香囊赠送次数已用完');
   const actual = Math.min(sendCount, before.gift.remainingCount, before.items.sachet.itemCount || sendCount);
   if (actual <= 0) throw new Error('鹊羽香囊不足');
+  let sent = 0;
   for (let i = 0; i < actual; i++) {
-    // 官方界面没有款式选项，抓包中该内部编号由客户端在 1-13 间自动选择。
-    const giftId = 1 + Math.floor(Math.random() * 13);
-    await operateActivityReply(QIXI_GIFT_ACTIVITY_ID, QIXI_GIFT_SEND_CMD, {
-      qixiGift: { friendGid: gid, giftId },
-    });
-    if (i + 1 < actual) await delay(450);
+    try {
+      const giftId = 1 + Math.floor(Math.random() * 13);
+      await operateActivityReply(QIXI_GIFT_ACTIVITY_ID, QIXI_GIFT_SEND_CMD, {
+        qixiGift: { friendGid: gid, giftId },
+      });
+      sent++;
+    } catch {
+      // 单个赠送失败不中断，继续下一个
+    }
+    if (i + 1 < actual) await delay(600);
   }
-  return { ok: true, friendGid: gid, sentCount: actual, activity: await getQixiActivity() };
+  return { ok: true, friendGid: gid, sentCount: sent, activity: await getQixiActivity() };
 }
 
 async function operateActivityReply(activityId, cmd, options = {}) {
