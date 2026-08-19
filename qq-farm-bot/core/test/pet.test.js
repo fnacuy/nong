@@ -5,17 +5,17 @@ const pet = require('../src/services/pet');
 
 function encodeVarintField(fieldNum, value) {
     const parts = [];
-    let key = (fieldNum << 3) | 0;
+    const key = (fieldNum << 3) | 0;
     let k = BigInt(key);
     while (true) {
-        const b = Number(k & 0x7fn);
+        const b = Number(k & 0x7Fn);
         k >>= 7n;
         if (k === 0n) { parts.push(b); break; }
         parts.push(b | 0x80);
     }
     let v = BigInt(value);
     while (true) {
-        const b = Number(v & 0x7fn);
+        const b = Number(v & 0x7Fn);
         v >>= 7n;
         if (v === 0n) { parts.push(b); break; }
         parts.push(b | 0x80);
@@ -27,7 +27,7 @@ function encodeBytesField(fieldNum, data) {
     const parts = [];
     let k = BigInt((fieldNum << 3) | 2);
     while (true) {
-        const b = Number(k & 0x7fn);
+        const b = Number(k & 0x7Fn);
         k >>= 7n;
         if (k === 0n) { parts.push(b); break; }
         parts.push(b | 0x80);
@@ -35,7 +35,7 @@ function encodeBytesField(fieldNum, data) {
     const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
     let len = BigInt(buf.length);
     while (true) {
-        const b = Number(len & 0x7fn);
+        const b = Number(len & 0x7Fn);
         len >>= 7n;
         if (len === 0n) { parts.push(b); break; }
         parts.push(b | 0x80);

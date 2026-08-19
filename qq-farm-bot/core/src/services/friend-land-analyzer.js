@@ -256,9 +256,15 @@ let friendsListCache = null;
  */
 /** 清洗好友昵称：去除控制字符与 UTF-8 替换字符，避免乱码展示。 */
 function sanitizeFriendName(raw) {
-  return String(raw || '')
-    .replace(/[\u0000-\u001F\u007F\uFFFD\uFFFE\uFFFF]/g, '')
-    .trim();
+  const s = String(raw || '')
+  let result = ''
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i)
+    if (c <= 0x1F || c === 0x7F || c === 0xFFFD || c === 0xFFFE || c === 0xFFFF)
+      continue
+    result += s[i]
+  }
+  return result.trim()
 }
 
 async function getFriendsList(forceRefresh = false) {

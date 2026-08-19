@@ -20,7 +20,7 @@ import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseSelect from '@/components/ui/BaseSelect.vue'
 import { useAutomationSettings } from '@/composables/settings/useAutomationSettings'
 import { useStrategySettings } from '@/composables/settings/useStrategySettings'
-import { useAccountStore, getPlatformClass, getPlatformLabel } from '@/stores/account'
+import { getPlatformClass, getPlatformLabel, useAccountStore } from '@/stores/account'
 import { useBagStore } from '@/stores/bag'
 import { useSettingStore } from '@/stores/setting'
 import { useStatusStore } from '@/stores/status'
@@ -129,6 +129,20 @@ const activeTab = ref('overview')
 const panelEl = ref<HTMLElement | null>(null)
 
 const swipeStart = { x: 0, y: 0 }
+
+const dashboardTabs = [
+  { key: 'overview', label: '概览', icon: 'i-carbon-chart-pie' },
+  { key: 'farm', label: '农场', icon: 'i-carbon-tree' },
+  { key: 'bag', label: '背包', icon: 'i-carbon-backpack' },
+  { key: 'friends', label: '好友', icon: 'i-carbon-user-multiple' },
+  { key: 'pet', label: '宠物', icon: 'i-carbon-dog-walker' },
+  { key: 'tasks', label: '任务', icon: 'i-carbon-task' },
+  { key: 'automation', label: '自动控制', icon: 'i-carbon-settings-adjust' },
+  { key: 'strategy', label: '策略设置', icon: 'i-carbon-settings' },
+  { key: 'illustrated', label: '图鉴', icon: 'i-carbon-book' },
+  { key: 'analytics', label: '分析', icon: 'i-carbon-analytics' },
+]
+
 function onSwipeStart(e: TouchEvent) {
   const t = e.changedTouches && e.changedTouches[0]
   if (!t)
@@ -162,19 +176,6 @@ watch(activeTab, () => {
   void el.offsetWidth
   el.classList.add('tab-fade')
 })
-
-const dashboardTabs = [
-  { key: 'overview', label: '概览', icon: 'i-carbon-chart-pie' },
-  { key: 'farm', label: '农场', icon: 'i-carbon-tree' },
-  { key: 'bag', label: '背包', icon: 'i-carbon-backpack' },
-  { key: 'friends', label: '好友', icon: 'i-carbon-user-multiple' },
-  { key: 'pet', label: '宠物', icon: 'i-carbon-dog-walker' },
-  { key: 'tasks', label: '任务', icon: 'i-carbon-task' },
-  { key: 'automation', label: '自动控制', icon: 'i-carbon-settings-adjust' },
-  { key: 'strategy', label: '策略设置', icon: 'i-carbon-settings' },
-  { key: 'illustrated', label: '图鉴', icon: 'i-carbon-book' },
-  { key: 'analytics', label: '分析', icon: 'i-carbon-analytics' },
-]
 
 const settingStore = useSettingStore()
 function showAlert(message: string, _type: 'primary' | 'danger' = 'primary') {
@@ -240,7 +241,7 @@ function parseLogTs(time: any): number {
   if (!Number.isNaN(t) && t > 0)
     return t
   let s = String(time).trim()
-  if (s.includes(' ') && /^\d{4}-\d{2}-\d{2} \d{1,2}:\d{2}(:\d{2})?/.test(s))
+  if (s.includes(' ') && /^\d{4}-\d{2}-\d{2} \d{1,2}:\d{2}(?::\d{2})?/.test(s))
     s = s.replace(' ', 'T')
   const parsed = Date.parse(s)
   if (!Number.isNaN(parsed))
@@ -785,7 +786,7 @@ useIntervalFn(updateCountdowns, 1000)
       </linearGradient>
     </defs>
   </svg>
-  <div ref="panelEl" class="flex flex-col gap-2 overflow-x-hidden pt-1 md:pt-2 pb-20" @touchstart="onSwipeStart" @touchend="onSwipeEnd">
+  <div ref="panelEl" class="flex flex-col gap-2 overflow-x-hidden pb-20 pt-1 md:pt-2" @touchstart="onSwipeStart" @touchend="onSwipeEnd">
     <!-- 首页子标签导航 -->
 
     <div class="sticky top-0 z-30 px-1 pt-1 -mx-1" style="transform: translateZ(0);">

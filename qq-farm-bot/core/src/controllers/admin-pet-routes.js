@@ -173,8 +173,8 @@ function registerAdminPetRoutes({
     });
     if (!accountId) return;
 
-    const page = parseInt(req.query.page, 10) || 1;
-    const pageSize = parseInt(req.query.pageSize, 10) || 10;
+    const page = Number.parseInt(req.query.page, 10) || 1;
+    const pageSize = Number.parseInt(req.query.pageSize, 10) || 10;
     try {
       const data = await provider.getGuardLogs(accountId, page, pageSize);
       res.json({ ok: true, data });

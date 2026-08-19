@@ -122,7 +122,7 @@ watch(() => props.currentAccountId, loadQixiFriends)
 </script>
 
 <template>
-  <div class="space-y-4 pb-20">
+  <div class="pb-20 space-y-4">
     <div class="flex items-center justify-between">
       <h3 class="text-lg text-gray-900 font-bold max-sm:text-base dark:text-gray-100">
         {{ title }}

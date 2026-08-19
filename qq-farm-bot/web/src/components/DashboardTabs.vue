@@ -7,7 +7,7 @@ export interface DashboardTab {
   icon: string
 }
 
-const props = defineProps<{
+defineProps<{
   tabs: DashboardTab[]
   activeTab: string
 }>()

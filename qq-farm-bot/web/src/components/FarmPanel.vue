@@ -97,7 +97,9 @@ function handleRemoveAllPlants() {
   confirmVisible.value = true
 }
 
-function getLandActionName(land: any) { return `#${land?.id ?? '-'} ${land?.plantName || '该作物'}` }
+function getLandActionName(land: any) {
+  return `#${land?.id ?? '-'} ${land?.plantName || '该作物'}`
+}
 
 function handleLandFertilize(land: any) {
   if (!currentAccountId.value)
@@ -132,9 +134,9 @@ function handleLandRemove(land: any) {
 }
 
 const operations = [
-  { type: 'fertilizeAllNormal', label: '一键无机肥', icon: 'i-carbon-chemistry' },
-  { type: 'fertilizeAllOrganic', label: '一键有机肥', icon: 'i-carbon-chemistry' },
-  { type: 'plant', label: '种植', icon: 'i-carbon-sprout' },
+  { type: 'fertilizeAllNormal', label: '一键无机', icon: 'i-carbon-chemistry' },
+  { type: 'fertilizeAllOrganic', label: '一键有机', icon: 'i-carbon-chemistry' },
+  { type: 'plant', label: '一键种植', icon: 'i-carbon-sprout' },
   { type: 'upgrade', label: '升级土地', icon: 'i-carbon-upgrade' },
   { type: 'all', label: '一键全收', icon: 'i-carbon-flash' },
 ]
@@ -165,7 +167,9 @@ watch(currentAccountId, (newId, oldId) => {
   refresh()
 }, { immediate: true })
 
-watch(() => currentAccount.value?.running, () => { refresh() })
+watch(() => currentAccount.value?.running, () => {
+  refresh()
+})
 
 const { pause, resume } = useIntervalFn(() => {
   if (lands.value) {
@@ -178,7 +182,10 @@ const { pause, resume } = useIntervalFn(() => {
 const { pause: pauseRefresh, resume: resumeRefresh } = useIntervalFn(refresh, 60000)
 resume()
 resumeRefresh()
-onUnmounted(() => { pause(); pauseRefresh() })
+onUnmounted(() => {
+  pause()
+  pauseRefresh()
+})
 </script>
 
 <template>

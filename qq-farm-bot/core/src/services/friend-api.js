@@ -590,7 +590,7 @@ async function fetchQqFriendsByLegacyMethod() {
  * Get all friends. For QQ platform, try GetGameFriends first (with known GIDs),
  * then fall back to legacy methods. For WeChat, use GetAll directly.
  */
-async function getAllFriends(forceRefresh = false) {
+async function getAllFriends(_forceRefresh = false) {
   const isQQ = CONFIG.platform === 'qq';
 
   if (isQQ) {

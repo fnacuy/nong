@@ -42,7 +42,7 @@ test('extracts service and method from a DogService.AddFood request', async () =
 
 test('records message_type for responses', async () => {
   const extractor = await createRpcExtractor();
-  const message = await createMessage('gamepb.dogpb.DogService', 'GetDogInfo', 2, Buffer.from([0x0a, 0x00]));
+  const message = await createMessage('gamepb.dogpb.DogService', 'GetDogInfo', 2, Buffer.from([0x0A, 0x00]));
   const result = extractor.handleMessage(message);
   assert.equal(result.messageType, 2);
 });

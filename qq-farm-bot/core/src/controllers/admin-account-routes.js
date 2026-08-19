@@ -40,7 +40,7 @@ function registerAdminAccountRoutes({
   getAccessibleAccountIdsFromRequest,
   userStore,
   sendProviderError,
-  requireAdminRole,
+  _requireAdminRole,
   requireSuperAdminRole,
   requireDangerConfirmation,
   expiredCodeCleaner,

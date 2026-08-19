@@ -32,7 +32,9 @@ watch(currentAccountId, (newId, oldId) => {
   refresh()
 }, { immediate: true })
 
-watch(() => currentAccount.value?.running, () => { refresh() })
+watch(() => currentAccount.value?.running, () => {
+  refresh()
+})
 
 function formatTaskProgress(task: any) {
   if (!task)

@@ -82,7 +82,9 @@ function handleNavClick(item: typeof navItems[number]) {
 
 // 账号弹窗
 const avatarErrors = ref<Set<string>>(new Set())
-function closePopup() { showAccountPopup.value = false }
+function closePopup() {
+  showAccountPopup.value = false
+}
 
 function goManageAccounts() {
   localStorage.setItem('settings-active-tab', 'account')

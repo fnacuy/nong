@@ -1,5 +1,4 @@
 const fs = require('fs');
-const path = require('path');
 const { getDataFile, ensureDataDir } = require('../config/runtime-paths');
 const crypto = require('crypto');
 

@@ -14,7 +14,9 @@ const GIFT_ICONS: Record<string, string> = {
   month_card_gift: 'i-carbon-calendar',
 }
 
-function getGiftIcon(key: string) { return GIFT_ICONS[key] || 'i-carbon-gift' }
+function getGiftIcon(key: string) {
+  return GIFT_ICONS[key] || 'i-carbon-gift'
+}
 
 const hasDailyData = computed(() => !!props.dailyGifts)
 const gifts = computed(() => props.dailyGifts?.gifts || [])

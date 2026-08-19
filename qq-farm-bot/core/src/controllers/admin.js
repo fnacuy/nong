@@ -336,7 +336,7 @@ function startAdminServer(dataProvider) {
     const origSend = res.send.bind(res);
     res.send = (body) => {
       if (res.statusCode >= 400 && res.statusCode < 500) {
-        adminLogger.warn("[TEMP-4XX] " + req.method + " " + req.originalUrl + " => " + res.statusCode, {
+        adminLogger.warn(`[TEMP-4XX] ${  req.method  } ${  req.originalUrl  } => ${  res.statusCode}`, {
           accountId: req.headers["x-account-id"] || "",
           body: typeof body === "string" ? String(body).slice(0, 300) : ""
         });

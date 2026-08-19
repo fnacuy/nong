@@ -101,7 +101,7 @@ async function doAddAccount() {
   try {
     const targetUin = String(uin.value || '').trim()
     const existing = accountStore.accounts.find(
-      (acc) => targetUin && String(acc.uin || '') === targetUin && acc.platform === 'qq',
+      acc => targetUin && String(acc.uin || '') === targetUin && acc.platform === 'qq',
     )
 
     if (existing) {
@@ -112,7 +112,8 @@ async function doAddAccount() {
       })
       await accountStore.startAccount(String(existing.id))
       toast.success(`QQ 账号 ${nickname.value || uin.value} 已更新 Code 并启动`)
-    } else {
+    }
+    else {
       await accountStore.addAccount({
         name: nickname.value || `QQ_${uin.value}`,
         code: authCode.value,
@@ -152,7 +153,7 @@ onBeforeUnmount(() => stopPolling())
 </script>
 
 <template>
-  <div class="mx-auto max-w-md space-y-6 py-8">
+  <div class="mx-auto max-w-md py-8 space-y-6">
     <div class="text-center">
       <h1 class="text-2xl font-bold">
         QQ 扫码登录
@@ -165,7 +166,7 @@ onBeforeUnmount(() => stopPolling())
     <!-- 初始状态 -->
     <div v-if="step === 'idle'" class="text-center">
       <button
-        class="rounded-xl px-8 py-4 text-lg font-medium text-white shadow-lg transition-all hover:opacity-90 hover:shadow-xl"
+        class="rounded-xl px-8 py-4 text-lg text-white font-medium shadow-lg transition-all hover:opacity-90 hover:shadow-xl"
         :style="{ backgroundColor: 'var(--theme-primary)' }"
         @click="startQR"
       >
@@ -184,7 +185,7 @@ onBeforeUnmount(() => stopPolling())
       v-if="step === 'ready' || step === 'waiting'"
       class="flex flex-col items-center gap-4 rounded-2xl bg-white p-6 shadow-md dark:bg-gray-800"
     >
-      <div class="overflow-hidden rounded-xl border-2 border-gray-200 dark:border-gray-700">
+      <div class="overflow-hidden border-2 border-gray-200 rounded-xl dark:border-gray-700">
         <img
           :src="qrImage"
           alt="QQ 扫码登录二维码"
@@ -225,7 +226,7 @@ onBeforeUnmount(() => stopPolling())
         >
         <div
           v-else
-          class="flex h-full w-full items-center justify-center text-gray-300"
+          class="h-full w-full flex items-center justify-center text-gray-300"
         >
           <div class="i-carbon-user text-3xl" />
         </div>
@@ -261,7 +262,7 @@ onBeforeUnmount(() => stopPolling())
     >
       <div class="i-carbon-close-outline text-4xl text-red-400" />
       <div class="text-center">
-        <div class="font-bold text-red-500">
+        <div class="text-red-500 font-bold">
           {{ qrMessage }}
         </div>
         <div
@@ -272,7 +273,7 @@ onBeforeUnmount(() => stopPolling())
         </div>
       </div>
       <button
-        class="rounded-xl px-6 py-3 font-medium text-white shadow-lg transition-all hover:opacity-90"
+        class="rounded-xl px-6 py-3 text-white font-medium shadow-lg transition-all hover:opacity-90"
         :style="{ backgroundColor: 'var(--theme-primary)' }"
         @click="reset(); startQR()"
       >
@@ -282,10 +283,10 @@ onBeforeUnmount(() => stopPolling())
 
     <!-- 使用说明 -->
     <div class="rounded-xl bg-white p-4 shadow-sm dark:bg-gray-800">
-      <h3 class="mb-2 font-bold text-sm">
+      <h3 class="mb-2 text-sm font-bold">
         使用说明
       </h3>
-      <ol class="list-inside list-decimal space-y-1 text-sm text-gray-500 dark:text-gray-400">
+      <ol class="list-decimal list-inside text-sm text-gray-500 space-y-1 dark:text-gray-400">
         <li>点击「生成二维码」获取登录码</li>
         <li>打开手机 QQ，扫描页面上的二维码</li>
         <li>在手机上确认登录</li>

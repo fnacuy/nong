@@ -77,11 +77,6 @@ function showAlert(message: string, type: 'primary' | 'danger' = 'primary') {
   modalVisible.value = true
 }
 
-function openCodeCleanupModal() {
-  showCodeCleanupModal.value = true
-  void loadCodeCleanupConfig()
-}
-
 const {
   passwordSaving,
   offlineSaving,
@@ -154,6 +149,11 @@ const {
   saveCodeCleanupConfig,
   runExpiredCodeCleanup,
 } = useAccountSettings(showAlert)
+
+function openCodeCleanupModal() {
+  showCodeCleanupModal.value = true
+  void loadCodeCleanupConfig()
+}
 
 // 默认方案 tab 内含策略/自动化设置子区，选项需与首页同款 composable 提供
 const {

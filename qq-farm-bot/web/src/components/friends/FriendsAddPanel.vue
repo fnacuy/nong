@@ -432,7 +432,9 @@ function cancelSending() {
 
 async function retryFailed() {
   const targets = rows.value.filter(r => r.status === 'failed')
-  targets.forEach((r) => { r.selected = true })
+  targets.forEach((r) => {
+    r.selected = true
+  })
   await sendSelected()
 }
 

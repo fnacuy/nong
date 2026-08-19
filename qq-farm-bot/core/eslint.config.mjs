@@ -26,6 +26,7 @@ export default antfu(
       'node/prefer-global/process': 'off',
       'unicorn/prefer-module': 'off',
       'unicorn/prefer-node-protocol': 'off',
+      'unused-imports/no-unused-vars': ['error', { caughtErrors: 'none', args: 'none' }],
     },
   },
 )

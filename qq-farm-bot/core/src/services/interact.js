@@ -146,6 +146,7 @@ async function fetchInteractReply() {
   }
 
   // 并发锁
+  // eslint-disable-next-line no-unmodified-loop-condition
   while (fetchInteractLock) {
     await sleep(100);
   }

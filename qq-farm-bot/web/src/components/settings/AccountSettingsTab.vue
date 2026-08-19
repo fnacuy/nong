@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import AccountModal from '@/components/AccountModal.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -62,6 +62,12 @@ const emit = defineEmits<{
 }>()
 
 const accountFilter = ref<'all' | 'running' | 'stopped'>('all')
+
+// Local refs for codeCleanupConfig to avoid prop mutation
+const localCodeCleanupConfig = ref({ ...props.codeCleanupConfig })
+watch(() => props.codeCleanupConfig, (newVal) => {
+  localCodeCleanupConfig.value = { ...newVal }
+}, { deep: true, immediate: true })
 
 const filteredAccounts = computed(() => {
   const accs = props.accounts
@@ -342,7 +348,7 @@ function accountAvatar(acc: any) {
               </p>
               <div class="mt-4 text-left space-y-3">
                 <BaseSwitch
-                  v-model="codeCleanupConfig.enabled"
+                  v-model="localCodeCleanupConfig.enabled"
                   label="启用自动定期清理"
                 />
                 <div>
@@ -350,7 +356,7 @@ function accountAvatar(acc: any) {
                     保留时限（天）
                   </label>
                   <BaseInput
-                    v-model.number="codeCleanupConfig.retainDays"
+                    v-model.number="localCodeCleanupConfig.retainDays"
                     type="number"
                     placeholder="7"
                   />
@@ -360,7 +366,7 @@ function accountAvatar(acc: any) {
                     连续失败阈值（次）
                   </label>
                   <BaseInput
-                    v-model.number="codeCleanupConfig.failThreshold"
+                    v-model.number="localCodeCleanupConfig.failThreshold"
                     type="number"
                     placeholder="3"
                   />
@@ -370,7 +376,7 @@ function accountAvatar(acc: any) {
                     自动清理间隔（小时，0 表示不自动执行）
                   </label>
                   <BaseInput
-                    v-model.number="codeCleanupConfig.intervalHours"
+                    v-model.number="localCodeCleanupConfig.intervalHours"
                     type="number"
                     placeholder="24"
                   />

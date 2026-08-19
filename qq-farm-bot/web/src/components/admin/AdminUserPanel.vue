@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { PremiumStatus, TurboStatus, UserCard } from '@/stores/user'
+import type { PremiumStatus, UserCard } from '@/stores/user'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import { formatTimeDuration } from '@/stores/user'
@@ -9,7 +9,6 @@ interface UserInfo {
   role: string
   card: UserCard | null
   accountLimit: number
-  turbo?: TurboStatus | null
   premium?: PremiumStatus | null
 }
 
@@ -68,22 +67,6 @@ function formatUserCardDate(timestamp: number | null) {
   if (!timestamp)
     return '-'
   return new Date(timestamp).toLocaleString('zh-CN')
-}
-
-function isTurboActive(turbo: TurboStatus | null | undefined) {
-  if (!turbo)
-    return false
-  if (turbo.isPermanent === true || turbo.days === -1 || turbo.durationValue === -1)
-    return true
-  return !!turbo.expiresAt && Date.now() < turbo.expiresAt
-}
-
-function turboStatusLabel(turbo: TurboStatus | null | undefined) {
-  if (!turbo)
-    return '未激活'
-  if (isTurboActive(turbo))
-    return '已激活'
-  return '已过期'
 }
 
 function isPremiumActive(premium: PremiumStatus | null | undefined) {
@@ -213,9 +196,6 @@ function premiumStatusLabel(premium: PremiumStatus | null | undefined) {
                 时长
               </th>
               <th class="px-3 py-2 text-left text-xs text-gray-500 font-medium uppercase dark:text-gray-300">
-                极速务农
-              </th>
-              <th class="px-3 py-2 text-left text-xs text-gray-500 font-medium uppercase dark:text-gray-300">
                 高级功能
               </th>
               <th class="px-3 py-2 text-left text-xs text-gray-500 font-medium uppercase dark:text-gray-300">
@@ -252,16 +232,6 @@ function premiumStatusLabel(premium: PremiumStatus | null | undefined) {
               </td>
               <td class="whitespace-nowrap px-3 py-2 text-sm text-gray-900 dark:text-white">
                 {{ user.card ? formatTimeDuration(user.card) : '无' }}
-              </td>
-              <td class="whitespace-nowrap px-3 py-2">
-                <span
-                  v-if="user.turbo"
-                  class="inline-flex rounded-full px-2 text-xs font-semibold leading-5"
-                  :class="isTurboActive(user.turbo) ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'"
-                >
-                  {{ turboStatusLabel(user.turbo) }} · {{ user.turbo.isPermanent === true || user.turbo.days === -1 || user.turbo.durationValue === -1 ? '永久' : formatUserCardDate(user.turbo.expiresAt) }}
-                </span>
-                <span v-else class="text-gray-400 dark:text-gray-500">-</span>
               </td>
               <td class="whitespace-nowrap px-3 py-2">
                 <span
@@ -531,18 +501,15 @@ function premiumStatusLabel(premium: PremiumStatus | null | undefined) {
     content: '时长';
   }
   .resp-table tbody tr td:nth-of-type(5)::before {
-    content: '极速务农';
-  }
-  .resp-table tbody tr td:nth-of-type(6)::before {
     content: '高级功能';
   }
-  .resp-table tbody tr td:nth-of-type(7)::before {
+  .resp-table tbody tr td:nth-of-type(6)::before {
     content: '过期时间';
   }
-  .resp-table tbody tr td:nth-of-type(8)::before {
+  .resp-table tbody tr td:nth-of-type(7)::before {
     content: '状态';
   }
-  .resp-table tbody tr td:nth-of-type(9)::before {
+  .resp-table tbody tr td:nth-of-type(8)::before {
     content: '操作';
   }
 }

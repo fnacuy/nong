@@ -91,7 +91,7 @@ const bagPriorityLandTypeOptions = [
 </script>
 
 <template>
-  <div class="space-y-4 pb-20">
+  <div class="pb-20 space-y-4">
     <div class="flex items-center justify-between">
       <h3 class="flex items-center gap-2 text-lg text-gray-900 font-bold max-sm:text-base dark:text-gray-100">
         <div class="i-fas-cog text-lg" />

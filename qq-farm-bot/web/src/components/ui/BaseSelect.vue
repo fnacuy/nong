@@ -25,7 +25,8 @@ const selectedLabel = computed(() => {
 })
 
 function updateDropdownPosition() {
-  if (!triggerRef.value) return
+  if (!triggerRef.value)
+    return
   const rect = triggerRef.value.getBoundingClientRect()
   const spaceBelow = window.innerHeight - rect.bottom
   dropdownStyle.value = {
@@ -44,7 +45,8 @@ function toggleDropdown() {
   if (!isOpen.value) {
     updateDropdownPosition()
     isOpen.value = true
-  } else {
+  }
+  else {
     isOpen.value = false
   }
 }

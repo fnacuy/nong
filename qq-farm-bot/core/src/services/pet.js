@@ -15,9 +15,6 @@ const { Buffer } = require('node:buffer');
 const { sendMsgAsync, getUserState, isConnected } = require('../utils/network');
 const { types } = require('../utils/proto');
 const { toNum, toLong, log, logWarn } = require('../utils/utils');
-const { createModuleLogger } = require('./logger');
-
-const petLogger = createModuleLogger('pet');
 
 const DOG_FOOD_IDS = [90004, 90005, 90006];
 const DOG_FOOD_DAYS = { 90004: 1, 90005: 3, 90006: 5 };
@@ -69,7 +66,7 @@ function parseRawFields(raw) {
         if (wireType === 0) {
             const v = readVarint(buf, offset);
             if (!v) break;
-            fields['f' + fieldNum] = Number(v.value);
+            fields[`f${  fieldNum}`] = Number(v.value);
             offset = v.offset;
         } else if (wireType === 2) {
             const len = readVarint(buf, offset);
@@ -77,9 +74,9 @@ function parseRawFields(raw) {
             const data = buf.slice(len.offset, len.offset + Number(len.value));
             try {
                 const str = data.toString('utf-8');
-                fields['f' + fieldNum] = /^[\x20-\x7E\u4e00-\u9fff]+$/.test(str) ? str : data.toString('hex');
+                fields[`f${  fieldNum}`] = /^[\x20-\x7E\u4E00-\u9FFF]+$/.test(str) ? str : data.toString('hex');
             } catch {
-                fields['f' + fieldNum] = data.toString('hex');
+                fields[`f${  fieldNum}`] = data.toString('hex');
             }
             offset = len.offset + Number(len.value);
         } else {
@@ -129,7 +126,7 @@ async function deployDog(dogTypeId) {
     } catch (e) {
         const msg = String(e && e.message || '');
         if (msg.includes('1007006')) return { ok: true };
-        throw new Error('上阵失败: ' + (e.message || e));
+        throw new Error(`上阵失败: ${  e.message || e}`);
     }
 }
 
@@ -146,7 +143,7 @@ async function withdrawDog() {
     } catch (e) {
         const msg = String(e && e.message || '');
         if (msg.includes('1007008')) return { ok: true };
-        throw new Error('收回失败: ' + (e.message || e));
+        throw new Error(`收回失败: ${  e.message || e}`);
     }
 }
 
@@ -167,7 +164,7 @@ async function getDogFoodList() {
     } catch (e) {
         const msg = String(e && e.message || '');
         if (msg.includes('1020002')) return { foods: [] };
-        logWarn('宠物', 'GetDogFoodList 失败: ' + msg, { module: 'pet', event: '狗粮列表', result: 'error', error: msg });
+        logWarn('宠物', `GetDogFoodList 失败: ${  msg}`, { module: 'pet', event: '狗粮列表', result: 'error', error: msg });
     }
     return { foods: [] };
 }
@@ -180,7 +177,7 @@ async function getOwnDogInfo() {
     const raw = Buffer.from(replyBody);
     const fields = parseRawFields(raw);
 
-    let dogTypes = [];
+    const dogTypes = [];
     if (fields.f1) {
         try {
             const info = types.PetStatus.decode(raw);
@@ -199,7 +196,7 @@ async function getOwnDogInfo() {
                 }
             }
         } catch (e) {
-            logWarn('宠物', 'DogInfo proto decode failed: ' + e.message + '，使用静态目录', { module: 'pet', event: '狗信息解析', result: 'error' });
+            logWarn('宠物', `DogInfo proto decode failed: ${  e.message  }，使用静态目录`, { module: 'pet', event: '狗信息解析', result: 'error' });
         }
     }
     if (dogTypes.length === 0) {
@@ -208,15 +205,15 @@ async function getOwnDogInfo() {
             const id = Number(idStr);
             dogTypes.push({ id, name, growTime: 0, qualityLevel: getDefaultQualityLevel(id), field4: 0, field7: id === activeDogId ? 1 : 0 });
         }
-        log('宠物', '使用静态目录构建了 ' + dogTypes.length + ' 只狗的类型数据', { module: 'pet', event: '狗信息解析', result: 'fallback' });
+        log('宠物', `使用静态目录构建了 ${  dogTypes.length  } 只狗的类型数据`, { module: 'pet', event: '狗信息解析', result: 'fallback' });
     }
 
     const dogTypeId = fields.f2 !== undefined ? Number(fields.f2) : 0;
-    const dogName = dogTypeId > 0 ? (DOG_TYPE_NAMES[dogTypeId] || ('未知#' + dogTypeId)) : '未上阵';
+    const dogName = dogTypeId > 0 ? (DOG_TYPE_NAMES[dogTypeId] || (`未知#${  dogTypeId}`)) : '未上阵';
     const foodRemainSec = fields.f3 !== undefined ? Number(fields.f3) : 0;
     const foodTotalCap = fields.f4 !== undefined ? Number(fields.f4) : 0;
 
-    let activeFoodItems = [];
+    const activeFoodItems = [];
     if (fields.f5) {
         try {
             const info = types.PetStatus.decode(raw);
@@ -243,7 +240,7 @@ async function getPetList() {
     } catch (e) {
         const msg = String(e && e.message || '');
         if (!msg.includes('1020002'))
-            logWarn('宠物', 'GetPetList 失败: ' + msg, { module: 'pet', event: '宠物列表', result: 'error' });
+            logWarn('宠物', `GetPetList 失败: ${  msg}`, { module: 'pet', event: '宠物列表', result: 'error' });
     }
     // GetPetList 在当前服务器版本常返回 1020002，回退到 GetDogInfo 解析狗类型目录
     try {
@@ -287,13 +284,13 @@ function transformPetListReply(reply) {
     if (reply.food_items && reply.food_items.length > 0) {
         activeFoodSummary = reply.food_items.map(f => {
             const days = DOG_FOOD_DAYS[Number(f.food_id)] || Math.round((Number(f.duration_sec) || 86400) / 86400);
-            return days + '天x' + f.count;
+            return `${days  }天x${  f.count}`;
         }).join(', ');
     }
     return {
         gid: 0, isOwn: true,
         dogTypeId,
-        dogName: DOG_TYPE_NAMES[dogTypeId] || ('未知#' + dogTypeId),
+        dogName: DOG_TYPE_NAMES[dogTypeId] || (`未知#${  dogTypeId}`),
         foodRemainSec,
         foodTotalCap,
         fed: foodRemainSec > 0,
@@ -374,7 +371,7 @@ async function getDogStatus(friendGid) {
         if (info.activeFoodItems && info.activeFoodItems.length > 0) {
             activeFoodSummary = info.activeFoodItems.map(f => {
                 const days = DOG_FOOD_DAYS[f.foodId] || Math.round((f.durationSec || 86400) / 86400);
-                return days + '天x' + f.count;
+                return `${days  }天x${  f.count}`;
             }).join(', ');
         }
         return {
@@ -400,7 +397,7 @@ async function getDogStatus(friendGid) {
             activeFoodSummary,
         };
     } catch (e) {
-        logWarn('宠物', 'getOwnDogInfo 失败，使用 getPetList: ' + (e.message || e), { module: 'pet', event: '狗状态', result: 'fallback' });
+        logWarn('宠物', `getOwnDogInfo 失败，使用 getPetList: ${  e.message || e}`, { module: 'pet', event: '狗状态', result: 'fallback' });
         const reply = await getPetList();
         if (!reply) return null;
         return transformPetListReply(reply);
@@ -422,7 +419,7 @@ async function feedDog(itemId, count = 1) {
             }
         }
     } catch (e) {
-        if (e && e.message && e.message.indexOf('狗粮投喂已达30天上限') !== -1) throw e;
+        if (e && e.message && e.message.includes('狗粮投喂已达30天上限')) throw e;
     }
 
     const body = types.AddFoodRequest.encode(types.AddFoodRequest.create({
@@ -435,8 +432,8 @@ async function feedDog(itemId, count = 1) {
         return { success: true, foodSec: toNum(reply.food_sec) };
     } catch (e) {
         const msg = String((e && e.message) || '');
-        logWarn('宠物', '喂食失败: ' + msg.substring(0, 80), { module: 'pet', event: '喂食', result: 'error' });
-        throw new Error('喂食失败: ' + (e.message || e));
+        logWarn('宠物', `喂食失败: ${  msg.substring(0, 80)}`, { module: 'pet', event: '喂食', result: 'error' });
+        throw new Error(`喂食失败: ${  e.message || e}`);
     }
 }
 
@@ -525,7 +522,7 @@ async function getGuardLogs(page = 1, pageSize = 10) {
             return reply;
         }
     } catch (e) {
-        logWarn('宠物', 'GetGuardLogs 失败: ' + (e.message || e), { module: 'pet', event: '守护日志', result: 'error' });
+        logWarn('宠物', `GetGuardLogs 失败: ${  e.message || e}`, { module: 'pet', event: '守护日志', result: 'error' });
     }
     return { items: [], total: 0 };
 }
@@ -539,7 +536,7 @@ async function getGuardReward() {
             return types.GetGuardRewardReply.decode(replyBody);
         }
     } catch (e) {
-        logWarn('宠物', 'GetGuardReward 失败: ' + (e.message || e), { module: 'pet', event: '护主奖励', result: 'error' });
+        logWarn('宠物', `GetGuardReward 失败: ${  e.message || e}`, { module: 'pet', event: '护主奖励', result: 'error' });
     }
     return { has_huzhu_dog: false, can_claim: false, rewards: [] };
 }
@@ -552,7 +549,7 @@ async function claimGuardReward() {
             return types.ClaimGuardRewardReply.decode(replyBody);
         }
     } catch (e) {
-        logWarn('宠物', 'ClaimGuardReward 失败: ' + (e.message || e), { module: 'pet', event: '护主奖励领取', result: 'error' });
+        logWarn('宠物', `ClaimGuardReward 失败: ${  e.message || e}`, { module: 'pet', event: '护主奖励领取', result: 'error' });
     }
     return { items: [], bonus_items: [] };
 }

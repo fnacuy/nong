@@ -1,6 +1,6 @@
 const { sendMsgAsync, getUserState } = require('../utils/network');
 const { types, waitForProtoReady } = require('../utils/proto');
-const { toLong, sleep, log } = require('../utils/utils');
+const { toLong, sleep } = require('../utils/utils');
 
 /** 普通化肥 ID */
 const NORMAL_FERTILIZER_ID = 1011;

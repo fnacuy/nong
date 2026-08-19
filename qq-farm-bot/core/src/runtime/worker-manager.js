@@ -100,7 +100,7 @@ function createWorkerManager(deps) {
         try {
             const { getUserPremiumStatus } = require('../models/user-store');
             const active = getUserPremiumStatus(target).active === true;
-            for (const [accountId, wrk] of Object.entries(workers)) {
+            for (const [, wrk] of Object.entries(workers)) {
                 if (!wrk || wrk.username !== target) continue;
                 try {
                     wrk.process.send({ type: 'premium_status', active });

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { onMounted, computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { usePetStore } from '@/stores/pet'
 import { useToastStore } from '@/stores/toast'
 
@@ -342,7 +342,7 @@ onMounted(() => {
               </button>
               <div
                 v-else
-                class="w-full rounded-lg bg-gray-100 py-2 text-center text-sm font-medium text-gray-400 dark:bg-gray-700 dark:text-gray-500"
+                class="w-full rounded-lg bg-gray-100 py-2 text-center text-sm text-gray-400 font-medium dark:bg-gray-700 dark:text-gray-500"
               >
                 未拥有
               </div>

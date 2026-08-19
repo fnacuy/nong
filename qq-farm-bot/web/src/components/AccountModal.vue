@@ -52,6 +52,7 @@ const captureAccountName = ref('')
 const capturePlatform = ref<'qq' | 'wx'>('qq')
 const showCaptureHelp = ref(false)
 const captureHelpMode = ref<'first' | 'daily'>('first')
+const yybConfigLoaded = ref(false)
 const captureHelpDevice = ref<'ios' | 'android'>('ios')
 const captureFlow = ref<CaptureFlowState | null>(null)
 
@@ -363,7 +364,6 @@ watch(activeTab, (tab) => {
 // ==================== 应用宝微信扫码登录 ====================
 const yybApiBase = ref('')
 const yybApiKey = ref('')
-const yybConfigLoaded = ref(false)
 const yybServerDefaults = ref(false)
 const yybAccountName = ref('')
 const yybError = ref('')
@@ -433,7 +433,7 @@ function isYybQrSessionLostError(error?: string, yybCode?: number) {
 }
 
 function isYybQrNetworkError(error?: string) {
-  return /tls handshake timeout|i\/o timeout|connection (refused|reset)|network is unreachable|buffer not ready|timeout|dial tcp|no such host/i.test(error || '')
+  return /tls handshake timeout|i\/o timeout|connection (?:refused|reset)|network is unreachable|buffer not ready|timeout|dial tcp|no such host/i.test(error || '')
 }
 
 function failYybQrAndPromptRescan(message: string, expectedGen = yybQrPollGen) {
@@ -485,7 +485,7 @@ async function autoAddYybAccountAfterScan(openid: string, nickname?: string) {
 
     await accountStore.fetchAccounts()
     const existing = accountStore.accounts.find(
-      (acc) => acc.platform === 'wx'
+      acc => acc.platform === 'wx'
         && (String(acc.yybOpenid || '') === openid || String(acc.openId || '') === openid),
     )
 
@@ -501,7 +501,8 @@ async function autoAddYybAccountAfterScan(openid: string, nickname?: string) {
       catch {
         // 启动失败不阻止关闭弹窗
       }
-    } else {
+    }
+    else {
       await accountStore.addAccount({
         name,
         code: data.data.code,
